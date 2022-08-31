@@ -1,0 +1,34 @@
+{
+  "configurations": [
+    {
+      "browse": {
+        "databaseFilename": "${default}",
+        "limitSymbolsToIncludedHeaders": false
+      },
+      "includePath": [
+        "/home/bharath/co.r/code/samrai.ws/devel/include/**",
+        "/home/bharath/co.r/code/co.r.ws/devel/include/**",
+        "/home/bharath/co.r/code/ext.ws/devel/include/**",
+        "/opt/ros/noetic/include/**",
+        "/home/bharath/co.r/code/ext.ws/src/abb_ros/abb_driver/include/**",
+        "/home/bharath/co.r/code/ext.ws/src/abb_ros/abb_driver2/abb_robot_driver/abb_egm_hardware_interface/include/**",
+        "/home/bharath/co.r/code/ext.ws/src/abb_ros/abb_driver2/abb_egm_rws_managers/include/**",
+        "/home/bharath/co.r/code/ext.ws/src/abb_ros/abb_driver2/abb_robot_driver/abb_egm_state_controller/include/**",
+        "/home/bharath/co.r/code/ext.ws/src/abb_ros/abb_driver2/abb_libegm/include/**",
+        "/home/bharath/co.r/code/ext.ws/src/abb_ros/abb_driver2/abb_librws/include/**",
+        "/home/bharath/co.r/code/ext.ws/src/abb_ros/abb_driver2/abb_robot_driver/abb_robot_cpp_utilities/include/**",
+        "/home/bharath/co.r/code/ext.ws/src/abb_ros/abb_driver2/abb_robot_driver/abb_rws_service_provider/include/**",
+        "/home/bharath/co.r/code/ext.ws/src/abb_ros/abb_driver2/abb_robot_driver/abb_rws_state_publisher/include/**",
+        "/home/bharath/co.r/code/ext.ws/src/image_marker/include/**",
+        "/home/bharath/co.r/code/co.r.ws/src/library/optitrack2/include/**",
+        "/usr/include/**"
+      ],
+      "name": "ROS",
+      "intelliSenseMode": "gcc-x64",
+      "compilerPath": "/usr/bin/gcc",
+      "cStandard": "gnu11",
+      "cppStandard": "c++14"
+    }
+  ],
+  "version": 4
+}
