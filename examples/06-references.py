@@ -9,7 +9,7 @@ from action_graph.agent import Agent
 
 class Haunt(Action):
     effects = {"SPKY": True}
-    preconditions = {"UNDD": True, "PRFMGK": "abracadabra"}
+    preconditions = {"UNDD": "$TEST", "PRFMGK": "abracadabra"}
 
     def on_execute(self, desired_state: State):
         print('Haunting...')
@@ -43,7 +43,8 @@ class PerformMagic(Action):
     }
 
     def on_execute(self, desired_state: State):
-        print('Performing Magic...')
+        # print(f"Performing Magic>>>{desired_state['PRFMGK']}")
+        print(f"Performing Magic>>>{self.agent.state['CHNTINC']}")
         return super().on_execute(desired_state)
 
 
@@ -78,4 +79,4 @@ if __name__ == "__main__":
     ai.update_state(world_state)
 
     print("Goal State:   ", goal_state)
-    ai.achieve_goal(goal_state)
+    ai.achieve_goal(goal_state, verbose=True)

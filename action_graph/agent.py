@@ -3,7 +3,7 @@
 import logging
 from time import sleep
 from enum import Enum, auto
-from typing import List
+from typing import ClassVar, List
 
 from action_graph.action import Action, ActionStatus, State
 from action_graph.planner import Planner, Plan
@@ -19,9 +19,9 @@ class ExecStatus(Enum):
 class Agent:
     """Autonomous agent to monitor system state, keep track of feasible actions, generate plans and achive desired goals"""
 
-    __execution_status: ExecStatus = ExecStatus.SUCCESS
-    __planner = Planner([])
-    __abort = False
+    __execution_status: ClassVar[ExecStatus] = ExecStatus.SUCCESS
+    __planner: ClassVar[Planner] = Planner([])
+    __abort: ClassVar[bool] = False
 
     def __init__(self, agent_name=None) -> None:
         if not agent_name:
@@ -31,6 +31,12 @@ class Agent:
         self.state: State = {}
 
     def load_actions(self, actions: List[Action]):
+        """
+        Load actions list; refresh in case of any changes to the actions data.
+
+        :param actions:List[Action]: List of actions.
+        """
+
         self.__planner.update_actions(actions)
 
     def update_state(self, state: State):
@@ -76,29 +82,86 @@ class Agent:
         #
         return _goals_met
 
-    def achieve_goal(self, goal: State, announce: bool = True):
+    def find_plan(self, goal: State, start_state: State = None, actions: List[Action] = None):
         """
-        Creates a plan to satisfy the goal state and executes it.
+        Generate an action plan for the specified goal state.
+        If no start_state is provided, the current state of the system is used. 
+
+        :param goal:State: Specify the goal state.
+        :param start_state:State=None: Specify a start state that is not the current state.
+        :param actions:List[Action]=None: List of actions that the planner can use; 
+                                          If this is not specified, the planner will use the 
+                                          previously loaded actions to plan.
+        :return:Plan: The plan - dictionary of actions and their expected outcomes. 
+        """
+
+        if not start_state:
+            start_state = self.state
+
+        if actions:
+            self.__planner.update_actions(actions)
+
+        plan: Plan = self.__planner.find_plan(self.state, goal)
+        if not plan:
+            logging.error(f"Planning Failed!")
+            return
+
+        self.__print_plan(plan)
+        return plan
+
+    def execute_plan(self, plan: Plan):
+        """
+        Execute a previously generated plan.
+
+        :param plan:Plan: Dictionary of actions and their expected outcomes (State)
+        """
+        
+        if not plan:
+            raise Exception('No plan to execute!')
+        
+        print('EXECUTING:')
+        for plan_step in plan.items():
+            #
+            self.__execute_plan_step(plan_step)
+            # if the exec status is still RUNNING, something's gone wrong
+            if self.__execution_status == ExecStatus.RUNNING:
+                logging.error(f"Execution is stuck! Aborting.")
+                self.abort()
+                return
+            # if the exec FAILURE; abort
+            if self.__execution_status == ExecStatus.FAILURE:
+                logging.error(f"Execution Failed!")
+                return
+            # if the exec ABORTED; abort
+            if self.__execution_status == ExecStatus.ABORTED:
+                logging.critical(f"Execution Aborted!")
+                return
+
+        logging.info(f"Execution Succeded!")
+
+    def achieve_goal(self, goal: State, verbose: bool = False):
+        """
+        Creates a plan to satisfy the goal state; executes it action-by-action; re-evaluates the plan at each step;
 
         :param goal:State: Desired goal state
         """
 
-        # state might have changed since the last time we planned
+        # state might have changed since the last step was executed
         while not self.is_goal_met(goal):
             # (re)generate the plan
-            plan_steps: Plan = self.__planner.find_plan(self.state, goal)
-            if not plan_steps:
+            plan: Plan = self.__planner.find_plan(self.state, goal)
+            if not plan:
                 self.__execution_status = ExecStatus.FAILURE
-                logging.error(f"Execution Failed!")
+                logging.error(f"Planning Failed!")
                 return
             # execute one plan step at a time
-            if announce:
-                self.__print_plan(plan_steps)
-            self.__execute_plan_step(next(iter(plan_steps.items())))
+            if verbose:
+                self.__print_plan(plan)
+            self.__execute_plan_step(next(iter(plan.items())))
             #
             # if the exec status is still RUNNING, something's gone wrong
             if self.__execution_status == ExecStatus.RUNNING:
-                logging.error(f"Execution is Stuck! Aborting")
+                logging.error(f"Execution is stuck! Aborting.")
                 self.abort()
                 return
             # if the exec FAILURE; abort
@@ -123,24 +186,21 @@ class Agent:
 
     def __execute_plan_step(self, plan_step):
         # initialize
-        action, services = plan_step
+        action, expected_outcome = plan_step
         self.__execution_status = ExecStatus.RUNNING
 
         if self.__abort:
             # logging.error(f'{action} : EXECUTION ABORTED BEFORE START !!')
-            action.on_aborted(services)
+            action.on_aborted(expected_outcome)
             self.__execution_status = ExecStatus.ABORTED
 
         # Initialise plan step
-        if not action.check_runtime_precondition(services):
+        if not action.check_runtime_precondition(expected_outcome):
             # Stop execution as action cannot be executed
             self.__execution_status = ExecStatus.FAILURE
 
-        # Run any prerequisites just before staring the execution
-        action.pre_execution(services)
-
         # Execute the plan step
-        action.execute(services)
+        action._execute(expected_outcome)
 
         # Wait until execution is complete
         # action.execute is an async process inside _execute,
@@ -156,7 +216,7 @@ class Agent:
                 break  # so move on
             # throttle loop
             sleep(0.05)
-            # logging.warning(f'{self.name} Action: {str(action)} is running...')
+            # logging.debug(f'Action: {str(action)} is running...')
 
         # Execution completed but with RUNNING Status
         if action.status == ActionStatus.RUNNING:
@@ -167,28 +227,28 @@ class Agent:
 
         # Execution completed with SUCCESS Status
         if action.status == ActionStatus.SUCCESS:
-            # Action executed withot errors; 
+            # Action executed withot errors;
             # update the state with the predicted outcomes
-            for k, v in services.items():
+            for k, v in expected_outcome.items():
                 self.state[k] = v
             #
             # logging.debug(f'[{action}] Action succeded.')
-            action.on_success(services)
+            action.on_success(expected_outcome)
             self.__execution_status = ExecStatus.SUCCESS
 
         # Execution failed
         if action.status == ActionStatus.FAILURE:
-            action.on_failure(services)
+            action.on_failure(expected_outcome)
             # Stop execution as action failed
             logging.error(f'[{action}] ACTION FAILED!')
             self.__execution_status = ExecStatus.FAILURE
 
         # Execution aborted
         if action.status == ActionStatus.ABORTED:
-            action.on_aborted(services)
+            action.on_aborted(expected_outcome)
             # Stop execution as action aborted
             logging.critical(f'[{action}] ACTION ABORTED!')
             self.__execution_status = ExecStatus.ABORTED
 
         # Any clean up needed after execution e.g. updating system states
-        action.on_exit(services)
+        action.on_exit(expected_outcome)

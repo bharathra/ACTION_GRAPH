@@ -17,6 +17,7 @@ class Planner():
         self._action_lookup: defaultdict = self.__create_action_lookup(actions)
         self.__plan: Plan = {}
         self.__step_state: State = {}
+        self.__services: State = {}
 
     def update_actions(self, actions: List[Action]) -> None:
         """
@@ -58,19 +59,16 @@ class Planner():
                 action = self._action_lookup[(gk, Ellipsis)]
                 if not action:
                     raise Exception(f'No action available to satisfy goal: {target_state}')
-            __outcome = self.__check_references(gv)
+                self.__services[gk] = gv
             #
             for pk, pv in action.preconditions.items():
                 pv = self.__check_references(pv)
                 self.__explore_actions({pk: pv})
             #
-            if not action.check_plan_precondition(__outcome):
-                raise Exception(f'Selected action failed to satisfy plan precondition: {target_state}')
-            #
             if action not in self.__plan:
                 self.__plan[action] = {}
-            self.__plan[action][gk] = __outcome
-            self.__step_state[gk] = __outcome
+            self.__plan[action][gk] = gv
+            self.__step_state[gk] = gv
 
     def __create_action_lookup(self, actions: List[Action]) -> Optional[Dict[Tuple[Any, Any], Action]]:
         lookup_actions: Dict[Tuple[Any, Any], Action] = defaultdict(list)
@@ -85,7 +83,12 @@ class Planner():
 
     def __check_references(self, ref: Any) -> Any:
         try:
-            if isinstance(ref, str) and '$' == ref[0]:
+            if isinstance(ref, str):
+                # while ref[1:] in self.__services:
+                #     ref = self.__services[ref[1:]]
+                # return ref
+                if ref[1:] in self.__services:
+                    return self.__services[ref[1:]]
                 if ref[1:] in self.__step_state:
                     return self.__step_state[ref[1:]]
         except:

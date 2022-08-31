@@ -2,7 +2,7 @@
 
 from enum import auto, Enum
 from threading import Thread
-from typing import ClassVar, Dict, Any
+from typing import Dict, Any
 
 
 State = Dict[Any, Any]
@@ -16,8 +16,9 @@ class ActionStatus(Enum):
 
 
 class Action():
-    effects: ClassVar[State] = {}
-    preconditions: ClassVar[State] = {}
+
+    effects: State = {}
+    preconditions: State = {}
 
     cost: float = 1.0
     status: ActionStatus = ActionStatus.SUCCESS
@@ -26,16 +27,10 @@ class Action():
         self.agent = agent
         self.__exec_thread: Thread = Thread(target=self.on_execute, args=())
 
-    def check_plan_precondition(self, outcome: State) -> bool:
-        return True
-
     def check_runtime_precondition(self, outcome: State) -> bool:
         return True
 
-    def pre_execution(self, outcome: State = None):
-        pass
-
-    def execute(self, outcome: State):
+    def _execute(self, outcome: State):
         self.status = ActionStatus.RUNNING
         self.__exec_thread = Thread(target=self.on_execute, args=(outcome,))
         self.__exec_thread.start()
