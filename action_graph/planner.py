@@ -62,24 +62,22 @@ class Planner():
             probable_actions = self._action_lookup[(gk, Ellipsis)]
             if not probable_actions:
                 return [(ActionImpossible(), State(), float("inf"))]
-        # store the expected outcomes of this action
-        expected_outcome: State = State()
-        expected_outcome[gk] = gv
 
         chosen_path: Path = []
         # assuming more than one probable action is available to explore;
         for action in probable_actions:
-            print(action)
+            if action.effects[gk] is Ellipsis:
+                action.effects[gk] = gv
             # explore each one ...
             action_path: Path = []
             for pk, pv in action.preconditions.items():
                 # for each pre-condition choose the shortest feasible path
-                pv = self.__check_references(pv, expected_outcome)
+                pv = self.__check_references(pv, action.effects)
                 _path: Path = self.__find_actions({pk: pv}, start_state)
                 # merge the actions by removing duplicates and keeping the order intact
                 action_path += _path
             # update the state with the current action's effects and
-            action_path += [(action, expected_outcome, action.cost)]
+            action_path += [(action, State(action.effects), action.cost)]
 
             # choose the shortest feasible path
             if not chosen_path:
@@ -109,12 +107,9 @@ class Planner():
 
     def __check_references(self, ref: Any, state: State) -> Any:
         try:
-            if isinstance(ref, str):
+            if isinstance(ref, str) and ref[0] == '$':
                 if ref[1:] in state:
-                    print(state)
-                    print('>>', ref)
                     ref = state[ref[1:]]
-                    print('<<', ref)
         except:
             raise Exception(f'Error accessing referred state: {ref}!!')
         #
