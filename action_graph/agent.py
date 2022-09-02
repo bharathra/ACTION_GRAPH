@@ -47,7 +47,7 @@ class Agent:
         :param state:State: Update the state of the agent
         """
 
-        self.state = {**self.state, **state}
+        self.state.update(state)
 
     def abort(self):
         """

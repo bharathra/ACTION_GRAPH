@@ -1,3 +1,4 @@
+#! /usr/bin/env python3
 
 import sys
 sys.path.append('/home/bharath/co.r/code/ext.ws/src/ACTION_GRAPH')
@@ -11,7 +12,7 @@ class Drive(Action):
     preconditions = {"has_drivers_license": True, "has_car": "$driving", "tank_has_gas": True}
 
     def on_execute(self, outcome: State):
-        print("Driving car>>>", self.agent.state["has_car"])
+        print("Driving car>>>", outcome["driving"])
         return super().on_execute(outcome)
 
 
@@ -29,18 +30,25 @@ class RentCar(Action):
     preconditions = {"rental_available": "$has_car"}
 
     def on_execute(self, outcome: State):
-        print("Renting car>>>", self.agent.state["has_car"])
         return super().on_execute(outcome)
+
+    def on_exit(self, expected_outcome: State = None):
+        print("Renting car>>>", self.agent.state["has_car"])
+        return super().on_exit(expected_outcome)
 
 
 class BuyCar(Action):
     effects = {"has_car": ...}
     preconditions = {}
-    # cost = 40000
+    cost = 40_000
 
     def on_execute(self, outcome: State):
         print(f"Buying car>>>{outcome['has_car']}")
         return super().on_execute(outcome)
+
+    def on_exit(self, expected_outcome: State = None):
+        print("Buying car>>>", self.agent.state["has_car"])
+        return super().on_exit(expected_outcome)
 
 
 if __name__ == "__main__":
@@ -58,4 +66,4 @@ if __name__ == "__main__":
     print("Goal State:   ", goal_state)
     plan = ai.find_plan(goal_state)
 
-    ai.execute_plan(plan)
+    # ai.execute_plan(plan)

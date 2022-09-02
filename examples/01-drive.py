@@ -1,3 +1,4 @@
+#! /usr/bin/env python3
 
 import sys
 sys.path.append('/home/bharath/co.r/code/ext.ws/src/ACTION_GRAPH')
@@ -18,7 +19,7 @@ class FillGas(Action):
 
 class RentCar(Action):
     effects = {"has_car": True}
-    preconditions = {}
+    preconditions = {"test": False}
 
     cost = 100  # dollars
 

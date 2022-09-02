@@ -1,11 +1,12 @@
 #! /usr/bin/env python3
 
-import logging
+import sys
 from collections import defaultdict
 from typing import Any, Dict, List, Optional, OrderedDict, Tuple
 
-from action_graph.action import Action, State
+from action_graph.action import Action, State, ActionImpossible
 
+Path = List[Tuple[Action, State, float]]
 Plan = OrderedDict[Action, State]
 
 
@@ -15,9 +16,6 @@ class Planner():
 
     def __init__(self, actions: List[Action]) -> None:
         self._action_lookup: defaultdict = self.__create_action_lookup(actions)
-        self.__plan: Plan = {}
-        self.__step_state: State = {}
-        self.__services: State = {}
 
     def update_actions(self, actions: List[Action]) -> None:
         """
@@ -29,7 +27,7 @@ class Planner():
 
         self._action_lookup: defaultdict = self.__create_action_lookup(actions)
 
-    def find_plan(self, start_state: State, target_state: State) -> Plan:
+    def find_plan(self, start_state: State, target_state: State) -> Path:
         """
         Find an optimal sequence of actions that will lead from the 
         start state to the target state and return a list of actions (the plan).
@@ -39,58 +37,84 @@ class Planner():
         :return:Plan: Ordered dictionary of actions and their predicted outcomes
         """
 
-        self.__plan.clear()
-        self.__step_state = start_state.copy()
-        #
-        try:
-            self.__explore_actions(target_state)
-            return self.__plan
-        except Exception as _ex:
-            logging.error(_ex)
+        path: Path = self.__find_actions(target_state, start_state)
+        return self.__path_to_plan(path)
 
-    def __explore_actions(self, target_state: State):
-        # DFS
-        for gk, gv in target_state.items():
-            if (gk, gv) in list(self.__step_state.items()):
-                continue  # goal already met, move on
-            #
-            action: Action = self._action_lookup[(gk, gv)]
-            if not action:
-                action = self._action_lookup[(gk, Ellipsis)]
-                if not action:
-                    raise Exception(f'No action available to satisfy goal: {target_state}')
-                self.__services[gk] = gv
-            #
+    def __path_to_plan(self, path):
+        plan: Plan = Plan()
+        for action, effects, cost in path:
+            plan[action] = effects
+        return plan
+
+    def __find_actions(self, target_state: State, start_state: State) -> Path:
+
+        gk, gv = list(target_state.items())[0]
+        # in case target_state is reference to another state variable
+        gv = self.__check_references(gv, start_state)
+        # check if the target state is already satisfied
+        if (gk, gv) in list(start_state.items()):
+            return []   # goal already met, move on
+
+        # find action(s) that satisfy the state current effect-item
+        probable_actions: List[Action] = self._action_lookup[(gk, gv)]
+        # if no actions are found, try with services
+        if not probable_actions:
+            probable_actions = self._action_lookup[(gk, Ellipsis)]
+            if not probable_actions:
+                return [(ActionImpossible(), State(), float("inf"))]
+        # store the expected outcomes of this action
+        expected_outcome: State = State()
+        expected_outcome[gk] = gv
+
+        chosen_path: Path = []
+        # assuming more than one probable action is available to explore;
+        for action in probable_actions:
+            print(action)
+            # explore each one ...
+            action_path: Path = []
             for pk, pv in action.preconditions.items():
-                pv = self.__check_references(pv)
-                self.__explore_actions({pk: pv})
-            #
-            if action not in self.__plan:
-                self.__plan[action] = {}
-            self.__plan[action][gk] = gv
-            self.__step_state[gk] = gv
+                # for each pre-condition choose the shortest feasible path
+                pv = self.__check_references(pv, expected_outcome)
+                _path: Path = self.__find_actions({pk: pv}, start_state)
+                # merge the actions by removing duplicates and keeping the order intact
+                action_path += _path
+            # update the state with the current action's effects and
+            action_path += [(action, expected_outcome, action.cost)]
+
+            # choose the shortest feasible path
+            if not chosen_path:
+                chosen_path = action_path
+            else:
+                chosen_path_cost = sum(a.cost for a, _, cost in chosen_path)
+                action_path_cost = sum(a.cost for a, _, cost in action_path)
+                if action_path_cost < chosen_path_cost:
+                    chosen_path = action_path
+
+        # return the path, state, and cost at the end of this action
+        if sum(a.cost for a, _, cost in chosen_path) > sys.float_info.max:
+            raise Exception(f'No action available to satisfy goal: {target_state}')
+        return self.__unique(chosen_path)
+
+    def __unique(self, path):
+        unique = set()
+        return [x for x in path if x not in unique and not unique.add(x)]
 
     def __create_action_lookup(self, actions: List[Action]) -> Optional[Dict[Tuple[Any, Any], Action]]:
         lookup_actions: Dict[Tuple[Any, Any], Action] = defaultdict(list)
         for action in actions:
             for k, v in action.effects.items():
-                if (k, v) in lookup_actions:
-                    if action.cost > lookup_actions[(k, v)].cost:
-                        continue
-                lookup_actions[(k, v)] = action
-            #
+                lookup_actions[(k, v)].append(action)
+        #
         return lookup_actions
 
-    def __check_references(self, ref: Any) -> Any:
+    def __check_references(self, ref: Any, state: State) -> Any:
         try:
             if isinstance(ref, str):
-                # while ref[1:] in self.__services:
-                #     ref = self.__services[ref[1:]]
-                # return ref
-                if ref[1:] in self.__services:
-                    return self.__services[ref[1:]]
-                if ref[1:] in self.__step_state:
-                    return self.__step_state[ref[1:]]
+                if ref[1:] in state:
+                    print(state)
+                    print('>>', ref)
+                    ref = state[ref[1:]]
+                    print('<<', ref)
         except:
             raise Exception(f'Error accessing referred state: {ref}!!')
         #

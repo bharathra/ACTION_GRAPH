@@ -15,10 +15,14 @@ class Haunt(Action):
         print('Haunting...')
         return super().on_execute(desired_state)
 
+    def on_exit(self, outcome: State = None):
+        # print('>>>TEST:',self.agent.state["TEST"])
+        print('>>>SPKY:', self.agent.state["SPKY"])
+        return super().on_exit(outcome)
 
 class BecomeUndead(Action):
     effects = {"UNDD": True}
-    preconditions = {"UNDD": False, "PRFMGK": "abracadabra"}
+    preconditions = {"UNDD": False, "PRFMGK": "abracadabra", "TEST": False}
 
     def on_execute(self, desired_state: State):
         print('Becoming Undead...')
@@ -28,7 +32,7 @@ class BecomeUndead(Action):
 class BecomeUndead2(Action):
     effects = {"UNDD": True}
     preconditions = {"UNDD": False, "PRFMGK": "abracadabra"}
-    cost = 1.1
+    cost = 100
 
     def on_execute(self, desired_state: State):
         print('Becoming Undead2...')
@@ -79,4 +83,6 @@ if __name__ == "__main__":
     ai.update_state(world_state)
 
     print("Goal State:   ", goal_state)
-    ai.achieve_goal(goal_state, verbose=True)
+    plan = ai.find_plan(goal_state)
+
+    ai.execute_plan(plan)

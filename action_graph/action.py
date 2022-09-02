@@ -2,10 +2,12 @@
 
 from enum import auto, Enum
 from threading import Thread
-from typing import Dict, Any
 
 
-State = Dict[Any, Any]
+class State(dict):
+
+    def __hash__(self):
+        return hash(tuple(frozenset(sorted(self.items()))))
 
 
 class ActionStatus(Enum):
@@ -27,15 +29,15 @@ class Action():
         self.agent = agent
         self.__exec_thread: Thread = Thread(target=self.on_execute, args=())
 
-    def check_runtime_precondition(self, outcome: State) -> bool:
+    def check_runtime_precondition(self, expected_outcome: State) -> bool:
         return True
 
-    def _execute(self, outcome: State):
+    def _execute(self, expected_outcome: State):
         self.status = ActionStatus.RUNNING
-        self.__exec_thread = Thread(target=self.on_execute, args=(outcome,))
+        self.__exec_thread = Thread(target=self.on_execute, args=(expected_outcome,))
         self.__exec_thread.start()
 
-    def on_execute(self, outcome: State):
+    def on_execute(self, expected_outcome: State):
         # NOTE: Any overrides of this method has to explicitly set
         # the status either one of SUCCESS, FAILURE, ABORTED;
         # otherwise, status will be treated as FAILURE
@@ -44,16 +46,16 @@ class Action():
     def is_running(self):
         return self.__exec_thread.is_alive()
 
-    def on_success(self, outcome: State = None):
+    def on_success(self, expected_outcome: State = None):
         pass
 
-    def on_failure(self, outcome: State = None):
+    def on_failure(self, expected_outcome: State = None):
         pass
 
-    def on_aborted(self, outcome: State = None):
+    def on_aborted(self, expected_outcome: State = None):
         pass
 
-    def on_exit(self, outcome: State = None):
+    def on_exit(self, expected_outcome: State = None):
         pass
 
     def __repr__(self) -> str:
@@ -61,3 +63,7 @@ class Action():
 
     def __hash__(self):
         return hash(self.__class__.__name__)
+
+
+class ActionImpossible(Action):
+    cost: float = float("inf")
