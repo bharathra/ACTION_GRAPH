@@ -65,5 +65,10 @@ class Action():
         return hash(self.__class__.__name__)
 
 
-class ActionImpossible(Action):
-    cost: float = float("inf")
+class ImpossibleAction():
+
+    action = Action()
+
+    def __init__(self, effects: State) -> None:
+        self.action.cost = float('inf')
+        self.action.effects = effects
