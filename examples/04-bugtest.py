@@ -40,6 +40,6 @@ if __name__ == "__main__":
     ai.update_state(world_state)
 
     print("Goal State:   ", goal_state)
-    plan = ai.find_plan(goal_state)
+    plan = ai.get_plan(goal_state)
 
     ai.execute_plan(plan)
