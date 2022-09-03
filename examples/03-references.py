@@ -1,9 +1,4 @@
-"""
-Sometimes we also want to pass the service value to another dependent action.
-In this example, the `PerformMagic` action requires two service (actions),
-`chant_incantation` and `cast_spell`, and passes the `performs_magic` effect value
-to both of them using `reference`.
-"""
+#! /usr/bin/env python3
 
 import sys
 sys.path.append('/home/bharath/co.r/code/ext.ws/src/ACTION_GRAPH')

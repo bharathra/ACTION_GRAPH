@@ -3,13 +3,13 @@
 import sys
 sys.path.append('/home/bharath/co.r/code/ext.ws/src/ACTION_GRAPH')
 
-from action_graph.action import Action
+from action_graph.action import Action, State
 from action_graph.agent import Agent
 
 
 class Action1(Action):
     effects = {"FIRST": True}
-    preconditions = {}
+    preconditions = {"SECOND": True}
 
 
 class Action2(Action):
@@ -22,14 +22,9 @@ class Action3(Action):
     preconditions = {"FIRST": True, "SECOND": True}
 
 
-class Action4(Action):
-    effects = {"FOURTH": True}
-    preconditions = {"FIRST": True, "THIRD": True}
-
-
 if __name__ == "__main__":
-    world_state = {} # unknown
-    goal_state = {"FOURTH": True}
+    world_state = {"FIRST": False, "SECOND": False, "THIRD": False}
+    goal_state = {"THIRD": True}
 
     ai = Agent()
 

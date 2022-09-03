@@ -7,8 +7,12 @@ from typing import Any, Dict, List, Tuple
 from action_graph.action import Action, State, ImpossibleAction
 
 
+class PlanningFailedException(Exception):
+    pass
+
+
 class Planner():
-    """Uses available Actions and the current State of the system to 
+    """Use available Actions and the current system State to 
     generate a plan (list of Actions) that satifies a desired goal state"""
 
     def __init__(self, actions: List[Action]) -> None:
@@ -25,8 +29,8 @@ class Planner():
 
     def generate_plan(self, target_state: State, start_state: State) -> List[Action]:
         """
-        Find an optimal sequence of actions that will lead from the
-        start state to the target state and return a list of actions (the plan).
+        Find and return an optimal sequence of actions (the plan) that will 
+        lead from the start state to the target state.
 
         :param target_state:State: Desired goal (target) state
         :param start_state:State: Current/start state of the system
@@ -34,35 +38,39 @@ class Planner():
         """
 
         if len(target_state.items()) > 1:
-            raise Exception('target_state should have a single state variable')
+            raise PlanningFailedException('target_state should have a single state variable')
         #
-        gk, gv = list(target_state.items())[0]
+        tk, tv = list(target_state.items())[0]
         # in case target_state is reference to another state variable
-        gv = self.__parse_references(gv, start_state)
+        tv = self.__parse_references(tv, start_state)
         # check if the target state is already satisfied
-        if (gk, gv) in list(start_state.items()):
+        if (tk, tv) in list(start_state.items()):
             return []   # goal already met, move on
 
         # find action(s) that satisfy the state current effect-item
-        probable_actions: List[Action] = self._action_lookup[(gk, gv)]
+        probable_actions: List[Action] = self._action_lookup[(tk, tv)]
         # if no actions are found, try with templated actions
         if not probable_actions:
-            probable_actions = self._action_lookup[(gk, Ellipsis)]
+            probable_actions = self._action_lookup[(tk, Ellipsis)]
             if not probable_actions:
-                return [ImpossibleAction({gk: gv}).action]
+                return [ImpossibleAction({tk: tv}).action]
 
         chosen_path: List[Action] = []
         # assuming more than one probable action is available to explore;
         for action in probable_actions:
             # explore each one ...
-            if action.effects[gk] is Ellipsis:
-                action.effects[gk] = gv  # apply any dynamic effects
+            if action.effects[tk] is Ellipsis:
+                action.effects[tk] = tv  # apply any dynamic effects
             #
             action_path: List[Action] = []
             for pk, pv in action.preconditions.items():
-                # for each pre-condition choose the shortest feasible path
-                pv = self.__parse_references(pv, action.effects)
-                action_path += self.generate_plan({pk: pv}, start_state)  # merge the actions
+                try:
+                    # for each pre-condition choose the shortest feasible path
+                    pv = self.__parse_references(pv, action.effects)
+                    action_path += self.generate_plan({pk: pv}, start_state)  # merge the actions
+                except RecursionError:
+                    # watch out for cyclic references
+                    raise PlanningFailedException(f'Found cyclic references in preconditions!')
             # include the current action;  remove duplicates; keep the order intact
             action_path = self.__make_unique(action_path + [action])
             #
@@ -77,7 +85,7 @@ class Planner():
         # check if path is feasible; path cost should be < infinite cost
         impossible_actions = [a for a in chosen_path if a.cost > sys.float_info.max]
         for ia in impossible_actions:
-            raise Exception(f'No action available to satisfy: {ia.effects}')
+            raise PlanningFailedException(f'No action available to satisfy: {ia.effects}')
         return chosen_path
 
     def __create_action_lookup(self, actions: List[Action]) -> Dict[Tuple[Any, Any], Action]:

@@ -19,7 +19,7 @@ class FillGas(Action):
 
 class RentCar(Action):
     effects = {"has_car": True}
-    preconditions = {"test": False}
+    # preconditions = {"test": False}
 
     cost = 100  # dollars
 

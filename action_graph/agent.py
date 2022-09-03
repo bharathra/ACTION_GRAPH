@@ -1,25 +1,17 @@
 #! /usr/bin/env python3
 
 import logging
-from time import sleep
-from enum import Enum, auto
+from time import sleep, time
 from typing import List
 
-from action_graph.action import Action, ActionStatus, State
-from action_graph.planner import Planner
-
-
-class ExecStatus(Enum):
-    FAILURE = auto()
-    SUCCESS = auto()
-    RUNNING = auto()
-    ABORTED = auto()
+from action_graph.action import (Action, ActionStatus, State,
+                                 ActionTimedOutException, ActionAbortedException, ActionFailedException)
+from action_graph.planner import Planner, PlanningFailedException
 
 
 class Agent:
     """Autonomous agent to monitor system state, keep track of feasible actions, generate plans and achive desired goals"""
 
-    __execution_status: ExecStatus = ExecStatus.SUCCESS
     __planner: Planner = Planner([])
     __abort: bool = False
 
@@ -41,18 +33,16 @@ class Agent:
 
     def update_state(self, state: State):
         """
-        Updates the state of the robot. It takes in a State dictionary that contains 
-        new information about the state and updates it to reflect this new information.        
+        Updates system state with the incoming state.        
 
-        :param state:State: Update the state of the agent
+        :param state:State: New state
         """
 
         self.state.update(state)
 
     def abort(self):
         """
-        The abort function is used to stop the agent from continuing with execution.
-        It is called by the planner when it encounters an error, and can also be called by the user.        
+        Abort execution.
         """
 
         self.__abort = True
@@ -101,13 +91,14 @@ class Agent:
         if actions:
             self.__planner.update_actions(actions)
 
-        plan: List[Action] = self.__planner.generate_plan(goal, self.state)
-        if not plan:
-            logging.error(f"Planning Failed!")
+        try:
+            plan: List[Action] = self.__planner.generate_plan(goal, self.state)
+            self.__print_plan(plan)
+            return plan
+            #
+        except PlanningFailedException as pfx:
+            logging.error(f"PLANNING FAILED! {pfx}")
             return []
-
-        self.__print_plan(plan)
-        return plan
 
     def execute_plan(self, plan: List[Action]):
         """
@@ -115,29 +106,30 @@ class Agent:
 
         :param plan:List[Action]: Dictionary of actions and their expected outcomes (State)
         """
-        
-        if not plan:
-            raise Exception('No plan to execute!')
-        
-        print('EXECUTING:')
-        for action in plan:
-            #
-            self.__execute_action(action)
-            # if the exec status is still RUNNING, something's gone wrong
-            if self.__execution_status == ExecStatus.RUNNING:
-                logging.error(f"Execution is stuck! Aborting.")
-                self.abort()
-                return
-            # if the exec FAILURE; abort
-            if self.__execution_status == ExecStatus.FAILURE:
-                logging.error(f"Execution Failed!")
-                return
-            # if the exec ABORTED; abort
-            if self.__execution_status == ExecStatus.ABORTED:
-                logging.critical(f"Execution Aborted!")
-                return
 
-        logging.info(f"Execution Succeded!")
+        if not plan:
+            logging.error(f"NO PLAN AVAILABLE! ABORTING EXECUTION.")
+            return
+
+        print('EXECUTING:')
+        try:
+            for action in plan:
+                self.__execute_action(action)
+            #
+        except ActionFailedException:
+            logging.error(f"EXECUTION FAILED!")
+            return
+
+        except ActionAbortedException:
+            logging.critical(f"EXECUTION ABORTED!")
+            return
+
+        except ActionTimedOutException:
+            logging.error(f"EXECUTION TIMED OUT! ABORTING.")
+            self.abort()
+            return
+        #
+        logging.info(f"EXECUTION SUCCEDED!")
 
     def achieve_goal(self, goal: State, verbose: bool = False):
         """
@@ -148,32 +140,33 @@ class Agent:
 
         # state might have changed since the last step was executed
         while not self.is_goal_met(goal):
-            # (re)generate the plan
-            plan: List[Action] = self.__planner.generate_plan(goal, self.state)
-            if not plan:
-                self.__execution_status = ExecStatus.FAILURE
-                logging.error(f"Planning Failed!")
-                return []
-            # execute one plan step at a time
-            if verbose:
-                self.__print_plan(plan)
-            self.__execute_action(plan[0])
-            #
-            # if the exec status is still RUNNING, something's gone wrong
-            if self.__execution_status == ExecStatus.RUNNING:
-                logging.error(f"Execution is stuck! Aborting.")
+
+            try:
+                # (re)generate the plan
+                plan: List[Action] = self.__planner.generate_plan(goal, self.state)
+                if verbose:
+                    self.__print_plan(plan)
+                # execute one plan step at a time
+                self.__execute_action(plan[0])
+
+            except PlanningFailedException:
+                logging.error(f"PLANNING FAILED!")
+                return
+
+            except ActionFailedException:
+                logging.error(f"EXECUTION FAILED!")
+                return
+
+            except ActionAbortedException:
+                logging.critical(f"EXECUTION ABORTED!")
+                return
+
+            except ActionTimedOutException:
+                logging.error(f"EXECUTION TIMED OUT! ABORTING.")
                 self.abort()
                 return
-            # if the exec FAILURE; abort
-            if self.__execution_status == ExecStatus.FAILURE:
-                logging.error(f"Execution Failed!")
-                return
-            # if the exec ABORTED; abort
-            if self.__execution_status == ExecStatus.ABORTED:
-                logging.critical(f"Execution Aborted!")
-                return
         #
-        logging.info(f"Execution Succeded!")
+        logging.info(f"EXECUTION SUCCEDED!")
 
     def __print_plan(self, plan: List[Action]):
         if plan:
@@ -182,19 +175,17 @@ class Agent:
                 plan_str += "....."*(ix+1) + str(action) + ' --> ' + str(action.effects) + '\n'
             print(plan_str)
 
-    def __execute_action(self, action):
+    def __execute_action(self, action: Action):
         # initialize
-        self.__execution_status = ExecStatus.RUNNING
-
         if self.__abort:
             # logging.error(f'{action} : EXECUTION ABORTED BEFORE START !!')
             action.on_aborted(action.effects)
-            self.__execution_status = ExecStatus.ABORTED
+            raise ActionAbortedException()
 
         # Initialise plan step
         if not action.check_runtime_precondition(action.effects):
             # Stop execution as action cannot be executed
-            self.__execution_status = ExecStatus.FAILURE
+            raise ActionFailedException()
 
         # Execute the plan step
         action._execute(action.effects)
@@ -202,14 +193,18 @@ class Agent:
         # Wait until execution is complete
         # action.execute is an async process inside _execute,
         # monitor the status from outside
+        time0 = time()
         while action.is_running():
             # Unless an abort was signalled
             if self.__abort:
                 logging.critical(f'{action} : EXECUTION ABORTED!!')
                 action.status = ActionStatus.ABORTED
                 break
+            # Action time exceeded
+            if time()-time0 > action.timeout:
+                raise ActionTimedOutException()
+            # thread is alive but the status has changed
             if not action.status == ActionStatus.RUNNING:
-                # thread is alive but the status has changed
                 break  # so move on
             # throttle loop
             sleep(0.05)
@@ -231,21 +226,18 @@ class Agent:
             #
             # logging.debug(f'[{action}] Action succeded.')
             action.on_success(action.effects)
-            self.__execution_status = ExecStatus.SUCCESS
 
         # Execution failed
         if action.status == ActionStatus.FAILURE:
             action.on_failure(action.effects)
             # Stop execution as action failed
-            logging.error(f'[{action}] ACTION FAILED!')
-            self.__execution_status = ExecStatus.FAILURE
+            raise ActionFailedException(f'[{action}] ACTION FAILED!')
 
         # Execution aborted
         if action.status == ActionStatus.ABORTED:
             action.on_aborted(action.effects)
             # Stop execution as action aborted
-            logging.critical(f'[{action}] ACTION ABORTED!')
-            self.__execution_status = ExecStatus.ABORTED
+            raise ActionAbortedException(f'[{action}] ACTION ABORTED!')
 
         # Any clean up needed after execution e.g. updating system states
         action.on_exit(action.effects)

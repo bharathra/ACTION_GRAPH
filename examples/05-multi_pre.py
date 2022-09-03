@@ -42,4 +42,4 @@ if __name__ == "__main__":
     print("Goal State:   ", goal_state)
     plan = ai.get_plan(goal_state)
 
-    ai.execute_plan(plan)
+    # ai.execute_plan(plan)

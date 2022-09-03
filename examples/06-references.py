@@ -22,7 +22,7 @@ class Haunt(Action):
 
 class BecomeUndead(Action):
     effects = {"UNDD": True}
-    preconditions = {"UNDD": False, "PRFMGK": "abracadabra", "TEST": False}
+    preconditions = {"UNDD": False, "PRFMGK": "abracadabra", "TEST": True}
 
     def on_execute(self, desired_state: State):
         print('Becoming Undead...')
