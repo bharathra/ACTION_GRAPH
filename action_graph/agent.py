@@ -176,38 +176,36 @@ class Agent:
             print(plan_str)
 
     def __execute_action(self, action: Action):
-        # initialize
+        # Check for abort status
         if self.__abort:
             # logging.error(f'{action} : EXECUTION ABORTED BEFORE START !!')
             action.on_aborted(action.effects)
             raise ActionAbortedException()
 
-        # Initialise plan step
+        # Check runtime precondition
         if not action.check_runtime_precondition(action.effects):
-            # Stop execution as action cannot be executed
             raise ActionFailedException()
 
         # Execute the plan step
         action._execute(action.effects)
-
-        # Wait until execution is complete
         # action.execute is an async process inside _execute,
         # monitor the status from outside
+
+        # Wait until execution is complete
         time0 = time()
         while action.is_running():
-            # Unless an abort was signalled
             if self.__abort:
+                # if an abort was signalled
                 logging.critical(f'{action} : EXECUTION ABORTED!!')
                 action.status = ActionStatus.ABORTED
                 break
-            # Action time exceeded
             if time()-time0 > action.timeout:
+                # Action timeout exceeded
                 raise ActionTimedOutException()
-            # thread is alive but the status has changed
             if not action.status == ActionStatus.RUNNING:
+                # thread is alive but the status has changed
                 break  # so move on
-            # throttle loop
-            sleep(0.05)
+            sleep(0.05)  # throttle loop
             # logging.debug(f'Action: {str(action)} is running...')
 
         # Execution completed but with RUNNING Status
@@ -219,11 +217,10 @@ class Agent:
 
         # Execution completed with SUCCESS Status
         if action.status == ActionStatus.SUCCESS:
-            # Action executed withot errors;
+            # Action executed without errors;
             # update the state with the predicted outcomes
             for k, v in action.effects.items():
                 self.state[k] = v
-            #
             # logging.debug(f'[{action}] Action succeded.')
             action.on_success(action.effects)
 

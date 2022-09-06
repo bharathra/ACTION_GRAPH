@@ -60,7 +60,7 @@ class Planner():
         for action in probable_actions:
             # explore each one ...
             if action.effects[tk] is Ellipsis:
-                action.effects[tk] = tv  # apply any dynamic effects
+                action.effects[tk] = tv  # apply variable effects
             #
             action_path: List[Action] = []
             for pk, pv in action.preconditions.items():
@@ -70,7 +70,7 @@ class Planner():
                     action_path += self.generate_plan({pk: pv}, start_state)  # merge the actions
                 except RecursionError:
                     # watch out for cyclic references
-                    raise PlanningFailedException(f'Found cyclic references in preconditions!')
+                    raise PlanningFailedException(f'Found cyclic references!')
             # include the current action;  remove duplicates; keep the order intact
             action_path = self.__make_unique(action_path + [action])
             #
@@ -78,7 +78,7 @@ class Planner():
             if not chosen_path:
                 chosen_path = action_path
                 continue
-            # if alrenative paths exist, use the one with the lowest cost
+            # if alternative paths exist, use the one with the lowest cost
             if sum(a.cost for a in action_path) < sum(a.cost for a in chosen_path):
                 chosen_path = action_path
 
