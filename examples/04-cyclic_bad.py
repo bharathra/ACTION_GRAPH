@@ -9,12 +9,12 @@ from action_graph.agent import Agent
 
 class Action1(Action):
     effects = {"FIRST": True}
-    preconditions = {"SECOND": True}
+    preconditions = {"SECOND": True}  # <- cyclic reference !!!
 
 
 class Action2(Action):
     effects = {"SECOND": True}
-    preconditions = {"FIRST": True}
+    preconditions = {"FIRST": True} # <- cyclic reference !!!
 
 
 class Action3(Action):

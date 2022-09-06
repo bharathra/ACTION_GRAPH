@@ -3,7 +3,8 @@
 import sys
 sys.path.append('/home/bharath/co.r/code/ext.ws/src/ACTION_GRAPH')
 
-from action_graph.action import Action, State
+import pytest
+from action_graph.action import Action
 from action_graph.agent import Agent
 
 
@@ -12,14 +13,9 @@ class Action1(Action):
     preconditions = {}
 
 
-class Action2X(Action):
-    effects = {"SECOND": True}
-    preconditions = {"FIRST": True}
-
-
 class Action2(Action):
     effects = {"SECOND": True}
-    preconditions = {}
+    preconditions = {"FIRST": True}
 
 
 class Action3(Action):
@@ -27,9 +23,14 @@ class Action3(Action):
     preconditions = {"FIRST": True, "SECOND": True}
 
 
-if __name__ == "__main__":
-    world_state = {"FIRST": False, "SECOND": False, "THIRD": False}
-    goal_state = {"THIRD": True}
+class Action4(Action):
+    effects = {"FOURTH": True}
+    preconditions = {"FIRST": True, "THIRD": True}
+
+
+def test():
+    world_state = {} # unknown
+    goal_state = {"FOURTH": True}
 
     ai = Agent()
 
@@ -42,4 +43,9 @@ if __name__ == "__main__":
     print("Goal State:   ", goal_state)
     plan = ai.get_plan(goal_state)
 
-    # ai.execute_plan(plan)
+    expected_actions = ["Action1", "Action2", "Action3", "Action4"]
+    expected_outcome = [{'FIRST': True}, {'SECOND': True}, {'THIRD': True}, {'FOURTH': True}]
+
+    for ax, eax, eoc in zip(plan, expected_actions, expected_outcome):
+        assert ax.__class__.__name__ == eax, f'Incorrect Action!'
+        assert ax.effects == eoc, f'Incorrect Action Outcome!'
