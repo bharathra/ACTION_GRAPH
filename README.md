@@ -31,7 +31,7 @@ class Action4(Action):
     preconditions = {"FIRST": True, "THIRD": True}
 
 
-def test():
+if __name__ == "__main__":
     world_state = {} # unknown
     goal_state = {"FOURTH": True}
 
