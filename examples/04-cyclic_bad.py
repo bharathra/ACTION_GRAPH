@@ -1,9 +1,6 @@
 #! /usr/bin/env python3
 
-import sys
-sys.path.append('/home/bharath/co.r/code/ext.ws/src/ACTION_GRAPH')
-
-from action_graph.action import Action, State
+from action_graph.action import Action
 from action_graph.agent import Agent
 
 
