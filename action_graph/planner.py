@@ -12,8 +12,7 @@ class PlanningFailedException(Exception):
 
 
 class Planner():
-    """Use available Actions and the current system State to 
-    generate a plan (list of Actions) that satifies a desired goal state"""
+    """Search and determine a plan (sequence of actions) that satifies a desired goal state"""
 
     def __init__(self, actions: List[Action]) -> None:
         self.update_actions(actions)
@@ -39,14 +38,13 @@ class Planner():
 
         if len(target_state.items()) > 1:
             raise PlanningFailedException('target_state should have a single state variable')
-        #
         tk, tv = list(target_state.items())[0]
         # in case target_state is reference to another state variable
         tv = self.__parse_references(tv, start_state)
         # check if the target state is already satisfied
         if (tk, tv) in list(start_state.items()):
             return []   # goal already met, move on
-
+        #
         # find action(s) that satisfy the state current effect-item
         probable_actions: List[Action] = self._action_lookup[(tk, tv)]
         # if no actions are found, try with templated actions
@@ -56,9 +54,7 @@ class Planner():
                 return [ImpossibleAction({tk: tv}).action]
 
         chosen_path: List[Action] = []
-        # assuming more than one probable action is available to explore;
-        for action in probable_actions:
-            # explore each one ...
+        for action in probable_actions:  # explore each available action...
             if action.effects[tk] is Ellipsis:
                 action.effects[tk] = tv  # apply variable effects
             #
@@ -68,15 +64,13 @@ class Planner():
                     # for each pre-condition choose the shortest feasible path
                     pv = self.__parse_references(pv, action.effects)
                     action_path += self.generate_plan({pk: pv}, start_state)  # merge the actions
-                except RecursionError:
-                    # watch out for cyclic references
+                except RecursionError:  # watch out for cyclic references
                     raise PlanningFailedException(f'Found cyclic references!')
             # include the current action;  remove duplicates; keep the order intact
             action_path = self.__make_unique(action_path + [action])
             #
-            # if no other path is available, use the current path
-            if not chosen_path:
-                chosen_path = action_path
+            if not chosen_path:  # if no other path is available...
+                chosen_path = action_path  # use the current path
                 continue
             # if alternative paths exist, use the one with the lowest cost
             if sum(a.cost for a in action_path) < sum(a.cost for a in chosen_path):
