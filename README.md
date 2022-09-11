@@ -1,8 +1,6 @@
 # ACTION_GRAPH
 A symbolic AI agent for generating action plans based on preconditions and effects. Similar to Goal Oriented Action Plan in concept, but this implementation treats individual state variables as nodes and uses DFS to generate a feasible, lowest cost plan.
 
-The interfaces for this library are similar to https://github.com/agoose77/GOAP.
-
 
 ## Usage:
 
@@ -54,4 +52,6 @@ if __name__ == "__main__":
 
 ```
 
+The interfaces for this library are similar to https://github.com/agoose77/GOAP.
+For more information on GOAP refer to http://alumni.media.mit.edu/~jorkin/goap.html
 

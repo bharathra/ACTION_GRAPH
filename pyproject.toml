@@ -7,7 +7,7 @@ authors = [
 ]
 
 name = "action_graph"
-version = "0.1.1"
+version = "1.0.0"
 description = "Autonomous agent for task/action planning and execution"
 readme = "README.md"
 license = {file="LICENSE"}
