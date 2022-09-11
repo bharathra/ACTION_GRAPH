@@ -6,15 +6,22 @@ authors = [
     {name = "Bharath Rao", email = "bharath.rao@hotmail.com"},
 ]
 
-license = {text = "MIT"}
-requires-python = ">=3.7,<4.0"
-dependencies = []
 name = "action_graph"
-version = "0.1.0"
+version = "0.1.1"
 description = "Autonomous agent for task/action planning and execution"
+readme = "README.md"
+license = {file="LICENSE"}
+requires-python = ">=3.7,<4.0"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+dependencies = []
 
 [project.urls]
-github = "https://github.com/bharathra/action_graph"
+"Homepage" = "https://github.com/bharathra/action_graph"
+"Bug Tracker" = "https://github.com/bharathra/action_graph/issues"
 
 [project.optional-dependencies]
 
