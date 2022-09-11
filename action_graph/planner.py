@@ -39,7 +39,7 @@ class Planner():
         if len(target_state.items()) > 1:
             raise PlanningFailedException('target_state should have a single state variable')
         tk, tv = list(target_state.items())[0]
-        # in case target_state is reference to another state variable
+        # in case target state value is a reference to another state variable
         tv = self.__parse_references(tv, start_state)
         # check if the target state is already satisfied
         if (tk, tv) in list(start_state.items()):
@@ -82,8 +82,8 @@ class Planner():
             raise PlanningFailedException(f'No action available to satisfy: {ia.effects}')
         return chosen_path
 
-    def __create_action_lookup(self, actions: List[Action]) -> Dict[Tuple[Any, Any], Action]:
-        action_lookup: Dict[Tuple[Any, Any], Action] = defaultdict(list)
+    def __create_action_lookup(self, actions: List[Action]) -> Dict[Tuple[Any, Any], List[Action]]:
+        action_lookup: Dict[Tuple[Any, Any], List[Action]] = defaultdict(list)
         for action in actions:
             for k, v in action.effects.items():
                 action_lookup[(k, v)].append(action)
