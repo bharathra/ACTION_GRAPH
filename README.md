@@ -1,43 +1,47 @@
 # ACTION_GRAPH
-AI agent for generating action plans based on preconditions and effects. Similar to GOAP in function, but this entirely different implementation.
+A symbolic AI agent for generating action plans based on preconditions and effects. Similar to Goal Oriented Action Plan in concept, but this implementation treats individual state variables as nodes and uses DFS to generate a feasible, lowest cost plan.
 
-The interfaces for this library are similar to https://github.com/agoose77/GOAP. The GOAP implementation has been replaced with a simple recursive Depth First Search for generating action plans.
+The interfaces for this library are similar to https://github.com/agoose77/GOAP.
 
 
 ## Usage:
 
 ```
-from action_graph.action import Action
+
 from action_graph.agent import Agent
+from action_graph.action import Action
 
 
-class Action1(Action):
-    effects = {"FIRST": True}
+class Drive(Action):
+    effects = {"driving": True}
+    preconditions = {"has_drivers_license": True, "tank_has_gas": True}
+
+
+class FillGas(Action):
+    effects = {"tank_has_gas": True}
+    preconditions = {"has_car": True}
+
+
+class RentCar(Action):
+    effects = {"has_car": True}
+
+    cost = 100  # dollars
+
+
+class BuyCar(Action):
+    effects = {"has_car": True}
     preconditions = {}
 
-
-class Action2(Action):
-    effects = {"SECOND": True}
-    preconditions = {"FIRST": True}
-
-
-class Action3(Action):
-    effects = {"THIRD": True}
-    preconditions = {"FIRST": True, "SECOND": True}
-
-
-class Action4(Action):
-    effects = {"FOURTH": True}
-    preconditions = {"FIRST": True, "THIRD": True}
+    cost = 10_000  # dollars
 
 
 if __name__ == "__main__":
-    world_state = {} # unknown
-    goal_state = {"FOURTH": True}
+    world_state = {"has_car": False, "has_drivers_license": True}
+    goal_state = {"driving": True}
 
     ai = Agent()
 
-    actions = [Action1, Action2, Action3, Action4]
+    actions = [a(ai) for a in Action.__subclasses__()]
     ai.load_actions(actions)
 
     print("Initial State:", world_state)
@@ -45,6 +49,9 @@ if __name__ == "__main__":
 
     print("Goal State:   ", goal_state)
     plan = ai.get_plan(goal_state)
+
+    # ai.execute_plan(plan)
+
 ```
 
 
