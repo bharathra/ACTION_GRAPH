@@ -1,5 +1,5 @@
 # ACTION_GRAPH
-A symbolic AI agent for generating action plans based on preconditions and effects. Similar to Goal Oriented Action Plan in concept, but this implementation treats individual state variables as nodes and uses DFS to generate a feasible, lowest cost plan.
+A symbolic AI agent for generating action plans based on preconditions and effects. Similar to Goal Oriented Action Plan in concept, but this implementation treats individual state variables as nodes and uses Dijikstra's (A* but without the heuristic cost estimate) to generate a feasible, lowest cost plan.
 
 
 ## Usage:

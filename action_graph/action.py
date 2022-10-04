@@ -1,5 +1,6 @@
 #! /usr/bin/env python3
 
+from copy import deepcopy
 from enum import auto, Enum
 from threading import Thread
 
@@ -64,6 +65,19 @@ class Action():
 
     def __hash__(self):
         return hash(self.__class__.__name__)
+
+    def __copy__(self):
+        # instantiate an object of Action (or its sub-class) type
+        a_copy = type(self)(self.agent)
+        # shallow copy
+        a_copy.cost = self.cost
+        a_copy.status = self.status
+        a_copy.timeout = self.timeout
+        # deep copy
+        memo = {id(self): a_copy}
+        a_copy.effects = deepcopy(self.effects, memo)
+        a_copy.preconditions = deepcopy(self.preconditions, memo)
+        return a_copy
 
 
 class ImpossibleAction():

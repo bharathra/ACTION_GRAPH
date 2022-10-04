@@ -54,7 +54,8 @@ class Planner():
                 return [ImpossibleAction({tk: tv}).action]
 
         chosen_path: List[Action] = []
-        for action in probable_actions:  # explore each available action...
+        for p_action in probable_actions:  # explore each available action...
+            action = p_action.__copy__()
             if action.effects[tk] is Ellipsis:
                 action.effects[tk] = tv  # apply variable effects
             #

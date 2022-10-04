@@ -72,7 +72,7 @@ class Agent:
         #
         return _goals_met
 
-    def get_plan(self, goal: State, start_state: State = None, actions: List[Action] = None) -> List[Action]:
+    def get_plan(self, goal: State, start_state: State = None, actions: List[Action] = None, verbose=False) -> List[Action]:
         """
         Generate an action plan for the specified goal state.
         If no start_state is provided, the current state of the system is used. 
@@ -92,8 +92,9 @@ class Agent:
             self.__planner.update_actions(actions)
 
         try:
-            plan: List[Action] = self.__planner.generate_plan(goal, self.state)
-            self.__print_plan(plan)
+            plan: List[Action] = self.__planner.generate_plan(goal, start_state)
+            if verbose:
+                self._print_plan(plan)
             return plan
             #
         except PlanningFailedException as pfx:
@@ -111,10 +112,9 @@ class Agent:
             logging.error(f"NO PLAN AVAILABLE! ABORTING EXECUTION.")
             return
 
-        print('EXECUTING:')
         try:
             for action in plan:
-                self.__execute_action(action)
+                self.execute_action(action)
             #
         except ActionFailedException:
             logging.error(f"EXECUTION FAILED!")
@@ -145,9 +145,9 @@ class Agent:
                 # (re)generate the plan
                 plan: List[Action] = self.__planner.generate_plan(goal, self.state)
                 if verbose:
-                    self.__print_plan(plan)
+                    self._print_plan(plan)
                 # execute one plan step at a time
-                self.__execute_action(plan[0])
+                self.execute_action(plan[0])
 
             except PlanningFailedException:
                 logging.error(f"PLANNING FAILED!")
@@ -168,23 +168,23 @@ class Agent:
         #
         logging.info(f"EXECUTION SUCCEDED!")
 
-    def __print_plan(self, plan: List[Action]):
+    def _print_plan(self, plan: List[Action]):
         if plan:
             plan_str = '\nPLAN:\n'
             for ix, action in enumerate(plan):
                 plan_str += "....."*(ix+1) + str(action) + ' --> ' + str(action.effects) + '\n'
             print(plan_str)
 
-    def __execute_action(self, action: Action):
+    def execute_action(self, action: Action):
         # Check for abort status
         if self.__abort:
             # logging.error(f'{action} : EXECUTION ABORTED BEFORE START !!')
             action.on_aborted(action.effects)
-            raise ActionAbortedException()
+            raise ActionAbortedException(f'[{action}] FAILED. ABORTED STATE IS ACTIVE!!')
 
         # Check runtime precondition
         if not action.check_runtime_precondition(action.effects):
-            raise ActionFailedException()
+            raise ActionFailedException(f'[{action}] RUNTIME PRECONDITION CHECK FAILED!!.')
 
         # Execute the plan step
         action._execute(action.effects)
@@ -196,12 +196,12 @@ class Agent:
         while action.is_running():
             if self.__abort:
                 # if an abort was signalled
-                logging.critical(f'{action} : EXECUTION ABORTED!!')
+                logging.critical(f'[{action}] : EXECUTION ABORTED!!')
                 action.status = ActionStatus.ABORTED
                 break
             if time()-time0 > action.timeout:
                 # Action timeout exceeded
-                raise ActionTimedOutException()
+                raise ActionTimedOutException(f'[{action}] : ACTION TIMED OUT!!')
             if not action.status == ActionStatus.RUNNING:
                 # thread is alive but the status has changed
                 break  # so move on
@@ -213,7 +213,7 @@ class Agent:
             # the user forgot to set the status; or something bad happened;
             # let's treat this as FAILURE!
             action.status = ActionStatus.FAILURE
-            logging.warning(f'[{action}] Action status UNKNOWN; Assuming action failed!')
+            logging.warning(f'[{action}] ACTION STATUS UNKNOWN; ASSUMING FAILURE!!')
 
         # Execution completed with SUCCESS Status
         if action.status == ActionStatus.SUCCESS:
