@@ -1,5 +1,5 @@
-# ACTION_GRAPH
-A symbolic AI agent for generating action plans based on preconditions and effects. Similar to Goal Oriented Action Plan in concept, but this implementation treats individual state variables as nodes and uses Dijikstra's (A* but without the heuristic cost estimate) to generate a feasible, lowest cost plan.
+# ActionGraph
+ActionGraph is a symbolic AI agent for generating action plans based on preconditions and effects. This is loosely based on STRIPS approach (https://en.wikipedia.org/wiki/Stanford_Research_Institute_Problem_Solver). State variables are modeled as nodes; the actions represent edges/transitions from one state to another. Dijikstra's shortest path algorithm (A* but without the heuristic cost estimate) is used to generate a feasible, lowest cost plan.
 
 
 ## Usage:
@@ -53,5 +53,3 @@ if __name__ == "__main__":
 ```
 
 The interfaces for this library are similar to https://github.com/agoose77/GOAP.
-For more information on GOAP refer to http://alumni.media.mit.edu/~jorkin/goap.html
-

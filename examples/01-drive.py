@@ -1,7 +1,7 @@
 #! /usr/bin/env python3
 
+from action_graph.action import Action, State, ActionStatus
 from action_graph.agent import Agent
-from action_graph.action import Action
 
 
 class Drive(Action):
@@ -18,6 +18,11 @@ class RentCar(Action):
     effects = {"has_car": True}
 
     cost = 100  # dollars
+
+    # # simulate failure
+    # def on_execute(self, outcome: State):
+    #     print('Rental not available!!')
+    #     self.status = ActionStatus.FAILURE
 
 
 class BuyCar(Action):
@@ -40,6 +45,10 @@ if __name__ == "__main__":
     ai.update_state(world_state)
 
     print("Goal State:   ", goal_state)
-    plan = ai.get_plan(goal_state)
-
+    #
+    # # option 1
+    # plan = ai.get_plan(goal_state)
     # ai.execute_plan(plan)
+    #
+    # option 2
+    ai.achieve_goal(goal_state, verbose=True)

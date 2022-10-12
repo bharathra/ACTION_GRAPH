@@ -16,6 +16,7 @@ class ActionStatus(Enum):
     SUCCESS = auto()
     RUNNING = auto()
     ABORTED = auto()
+    NEUTRAL = auto()
 
 
 class Action():
@@ -26,6 +27,7 @@ class Action():
     cost: float = 1.0
     status: ActionStatus = ActionStatus.SUCCESS
     timeout: float = 86_400.0  # 24 hours
+    allow_async: bool = False
 
     def __init__(self, agent=None) -> None:
         self.agent = agent
@@ -57,14 +59,30 @@ class Action():
     def on_aborted(self, outcome: State = None):
         pass
 
+    def on_neutral(self, outcome: State = None):
+        pass
+
     def on_exit(self, outcome: State = None):
         pass
+
+    def apply_effects(self, outcome: State, state: State):
+        # update the state with the predicted outcomes
+        for k, v in self.effects.items():
+            state[k] = v
 
     def __repr__(self) -> str:
         return self.__class__.__name__
 
     def __hash__(self):
         return hash(self.__class__.__name__)
+
+    def __eq__(self, __o: object) -> bool:
+        if self.__class__.__name__ == __o.__class__.__name__ and \
+                self.cost == __o.cost and \
+                self.effects == __o.effects and \
+                self.preconditions == __o.preconditions:
+            return True
+        return False
 
     def __copy__(self):
         # instantiate an object of Action (or its sub-class) type

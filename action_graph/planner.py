@@ -26,7 +26,7 @@ class Planner():
 
         self._action_lookup: defaultdict = self.__create_action_lookup(actions)
 
-    def generate_plan(self, target_state: State, start_state: State) -> List[Action]:
+    def generate_plan(self, target_state: State, start_state: State, avoid_actions: List[Action] = None) -> List[Action]:
         """
         Find and return an optimal sequence of actions (the plan) that will 
         lead from the start state to the target state.
@@ -47,11 +47,12 @@ class Planner():
         #
         # find action(s) that satisfy the state current effect-item
         probable_actions: List[Action] = self._action_lookup[(tk, tv)]
-        # if no actions are found, try with templated actions
-        if not probable_actions:
+        if not probable_actions:  # if no actions are found, try with templated actions
             probable_actions = self._action_lookup[(tk, Ellipsis)]
-            if not probable_actions:
-                return [ImpossibleAction({tk: tv}).action]
+        if avoid_actions:  # actions we do not want to consider for planning
+            probable_actions = [a for a in probable_actions if str(a) not in avoid_actions]
+        if not probable_actions:
+            return [ImpossibleAction({tk: tv}).action]
 
         chosen_path: List[Action] = []
         for p_action in probable_actions:  # explore each available action...
@@ -60,11 +61,10 @@ class Planner():
                 action.effects[tk] = tv  # apply variable effects
             #
             action_path: List[Action] = []
-            for pk, pv in action.preconditions.items():
-                try:
-                    # for each pre-condition choose the shortest feasible path
+            for pk, pv in action.preconditions.items():  # for each pre-condition ...
+                try:  # choose the shortest feasible path
                     pv = self.__parse_references(pv, action.effects)
-                    action_path += self.generate_plan({pk: pv}, start_state)  # merge the actions
+                    action_path += self.generate_plan({pk: pv}, start_state, avoid_actions)  # merge the actions
                 except RecursionError:  # watch out for cyclic references
                     raise PlanningFailedException(f'Found cyclic references!')
             # include the current action;  remove duplicates; keep the order intact

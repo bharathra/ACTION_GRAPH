@@ -1,5 +1,7 @@
 #! /usr/bin/env python3
 
+import time
+
 from action_graph.agent import Agent
 from action_graph.action import Action, State
 
@@ -10,6 +12,16 @@ class Drive(Action):
 
     def on_execute(self, outcome: State):
         print("Driving car>>>", outcome["driving"])
+        return super().on_execute(outcome)
+
+class ApplyForDriversLicense(Action):
+    effects: State = {"has_drivers_license": True}
+    # simulate async action
+    allow_async: bool = True
+
+    def on_execute(self, outcome: State):
+        time.sleep(1)
+        print("Drivers ed completed; Have license>>>", outcome["has_drivers_license"])
         return super().on_execute(outcome)
 
 
@@ -27,10 +39,11 @@ class RentCar(Action):
     preconditions = {"rental_available": "$has_car"}
 
     def on_execute(self, outcome: State):
+        print("Renting car>>>", self.agent.state["has_car"])
         return super().on_execute(outcome)
 
     def on_exit(self, expected_outcome: State = None):
-        print("Renting car>>>", self.agent.state["has_car"])
+        print("Rented car>>>", self.agent.state["has_car"])
         return super().on_exit(expected_outcome)
 
 
@@ -44,12 +57,12 @@ class BuyCar(Action):
         return super().on_execute(outcome)
 
     def on_exit(self, expected_outcome: State = None):
-        print("Buying car>>>", self.agent.state["has_car"])
+        print("Bought car>>>", self.agent.state["has_car"])
         return super().on_exit(expected_outcome)
 
 
 if __name__ == "__main__":
-    world_state = {"has_drivers_license": True}
+    world_state = {"has_drivers_license": False}
     goal_state = {"driving": "Delorean"}
 
     ai = Agent()
@@ -61,6 +74,10 @@ if __name__ == "__main__":
     ai.update_state(world_state)
 
     print("Goal State:   ", goal_state)
-    plan = ai.get_plan(goal_state)
-
-    ai.execute_plan(plan)
+    #
+    # # option 1
+    # plan = ai.get_plan(goal_state)
+    # ai.execute_plan(plan)
+    #
+    # option 2
+    ai.achieve_goal(goal_state, verbose=True)

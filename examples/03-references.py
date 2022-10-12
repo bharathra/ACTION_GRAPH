@@ -6,7 +6,7 @@ from action_graph.agent import Agent
 
 class GoBackToTheFuture(Action):
     effects = {"year": "1985"}
-    preconditions = {"year": "1955", "has_time_machine": True, "has_power": "$required_power"}
+    preconditions = {"year": "1955", "has_time_machine": True, "critical_speed": "88mph"}
 
     def on_execute(self, desired_state: State):
         print('Going Back to the future...')
@@ -31,10 +31,9 @@ class DoNuclearFission(Action):
     preconditions: State = {"have_fuel": "plutonium"}
     cost: float = 10000
 
-    def on_execute(self, desired_state: State):
-        print('Starting nuclear fission...')
-        return super().on_execute(desired_state)
-
+    def on_execute(self, outcome: State):
+        print('Nuclear fission FAILED!!!...')
+        self.status = ActionStatus.FAILURE
 
 class WaitForThunderStorm(Action):
     effects = {"has_power": ...}
@@ -49,6 +48,13 @@ class WaitForThunderStorm(Action):
         print(f">>>{outcome['has_power']} available...")
         return super().on_success(outcome)
 
+class AccelerateToCriticalSpeed(Action):
+    effects: State = {"critical_speed": ...}
+    preconditions: State = {"has_power": "$required_power"}
+
+    def on_execute(self, desired_state: State):
+        print(f"Accelerating {self.agent.state['has_car']} to {self.effects['critical_speed']}...")
+        self.status = ActionStatus.SUCCESS  # Ensure the action status is set
 
 class GetCar(Action):
     effects: State = {"has_car": ...}
@@ -63,6 +69,7 @@ if __name__ == "__main__":
     world_state = {"year": "1955",
                    "car_at_doc_browns_lab": "Delorean",
                    "predict_lightening_strike": True,
+                   "have_fuel": "plutonium",
                    "required_power": "1.21_gigawatts"}
 
     goal_state = {"year": "1985"}
@@ -76,6 +83,10 @@ if __name__ == "__main__":
     ai.update_state(world_state)
 
     print("Goal State:   ", goal_state)
-    plan = ai.get_plan(goal_state)
-
-    ai.execute_plan(plan)
+    #
+    # # option 1
+    # plan = ai.get_plan(goal_state)
+    # ai.execute_plan(plan)
+    #
+    # option 2
+    ai.achieve_goal(goal_state, verbose=True)
