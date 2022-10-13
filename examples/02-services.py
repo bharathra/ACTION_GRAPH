@@ -14,6 +14,7 @@ class Drive(Action):
         print("Driving car>>>", outcome["driving"])
         return super().on_execute(outcome)
 
+
 class ApplyForDriversLicense(Action):
     effects: State = {"has_drivers_license": True}
     # simulate async action
@@ -79,5 +80,9 @@ if __name__ == "__main__":
     # plan = ai.get_plan(goal_state)
     # ai.execute_plan(plan)
     #
-    # option 2
-    ai.achieve_goal(goal_state, verbose=True)
+    # # option 2
+    # ai.achieve_goal(goal_state, verbose=True)
+    #
+    # # option 3
+    for plan in ai.achieve_goal_interactive(goal_state):
+        ai.print_plan_to_console(plan)

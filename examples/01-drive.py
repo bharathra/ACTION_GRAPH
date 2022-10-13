@@ -1,7 +1,7 @@
 #! /usr/bin/env python3
 
-from action_graph.action import Action, State, ActionStatus
 from action_graph.agent import Agent
+from action_graph.action import Action, State, ActionStatus
 
 
 class Drive(Action):
@@ -51,4 +51,8 @@ if __name__ == "__main__":
     # ai.execute_plan(plan)
     #
     # option 2
-    ai.achieve_goal(goal_state, verbose=True)
+    # ai.achieve_goal(goal_state, verbose=True)
+    #
+    # # option 3
+    for plan in ai.achieve_goal_interactive(goal_state):
+        ai.print_plan_to_console(plan)

@@ -1,6 +1,8 @@
 # ActionGraph
 ActionGraph is a symbolic AI agent for generating action plans based on preconditions and effects. This is loosely based on STRIPS approach (https://en.wikipedia.org/wiki/Stanford_Research_Institute_Problem_Solver). State variables are modeled as nodes; the actions represent edges/transitions from one state to another. Dijikstra's shortest path algorithm (A* but without the heuristic cost estimate) is used to generate a feasible, lowest cost plan.
 
+The interfaces for this library are similar to https://github.com/agoose77/GOAP.
+
 
 ## Usage:
 
@@ -52,4 +54,3 @@ if __name__ == "__main__":
 
 ```
 
-The interfaces for this library are similar to https://github.com/agoose77/GOAP.

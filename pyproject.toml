@@ -3,11 +3,11 @@
 # See https://www.python.org/dev/peps/pep-0621/
 
 authors = [
-    {name = "Bharath Rao", email = "bharath.rao@hotmail.com"},
+    {name = "Bharath Achyutha Rao", email = "bharath.rao@hotmail.com"},
 ]
 
 name = "action_graph"
-version = "1.2.0"
+version = "1.2.1"
 description = "Autonomous agent for task/action planning and execution"
 readme = "README.md"
 license = {file="LICENSE"}

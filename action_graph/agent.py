@@ -71,7 +71,7 @@ class Agent:
 
         return True
 
-    def get_plan(self, goal: State, start_state: State = None, actions: List[Action] = None, verbose=False) -> List[Action]:
+    def get_plan(self, goal: State, start_state: State = None, actions: List[Action] = None) -> List[Action]:
         """
         Generate an action plan for the specified goal state.
         If no start_state is provided, the current state of the system is used. 
@@ -91,10 +91,7 @@ class Agent:
             self.__planner.update_actions(actions)
 
         try:
-            plan: List[Action] = self.__planner.generate_plan(goal, start_state)
-            if verbose:
-                self._print_plan(plan)
-            return plan
+            return self.__planner.generate_plan(goal, start_state)
             #
         except PlanningFailedException as pfx:
             logging.error(f"PLANNING FAILED! {pfx}")
@@ -123,27 +120,28 @@ class Agent:
         Creates a plan to satisfy the goal state; executes it action-by-action; re-evaluates the plan at each step;
 
         :param goal:State: Desired goal state
+        :param verbose:bool: Print plan to console at each step, if True
         """
 
-        _avoid_actions: List[Action] = []
+        __actions_to_avoid: List[str] = []
 
         # state might have changed since the last step was executed
         while not self.is_goal_met(goal):
 
             try:
                 # (re)generate the plan
-                plan: List[Action] = self.__planner.generate_plan(goal, self.state, _avoid_actions)
+                plan: List[Action] = self.__planner.generate_plan(goal, self.state, __actions_to_avoid)
                 if verbose:
-                    self._print_plan(plan)
+                    self.print_plan_to_console(plan)
                 # execute one plan step at a time
-                immediate_action = plan[0]
-                self.execute_action(immediate_action)
+                __action = plan[0]
+                self.execute_action(__action)
 
             except ActionFailedException as ex_fail:
                 logging.error(f"{ex_fail} / ATTEMPTING ALTERNATIVE PLAN")
-                action_name = str(immediate_action)
-                if action_name not in _avoid_actions:
-                    _avoid_actions.append(action_name)
+                __action_name = str(__action)
+                if __action_name not in __actions_to_avoid:
+                    __actions_to_avoid.append(__action_name)
                 continue
 
             except Exception as _ex:
@@ -153,11 +151,44 @@ class Agent:
 
         logging.info(f"EXECUTION SUCCEDED!")
 
-    def _print_plan(self, plan: List[Action]):
+    def achieve_goal_interactive(self, goal: State):
+        """
+        Creates a plan to satisfy the goal state; executes it action-by-action; re-evaluates the plan at each step;
+
+        :param goal:State: Desired goal state
+        """
+
+        __actions_to_avoid: List[str] = []
+
+        # state might have changed since the last step was executed
+        while not self.is_goal_met(goal):
+
+            try:
+                # (re)generate the plan
+                plan: List[Action] = self.__planner.generate_plan(goal, self.state, __actions_to_avoid)
+                yield plan
+                # execute one plan step at a time
+                self.execute_action(plan[0])
+
+            except ActionFailedException as ex_fail:
+                logging.error(f"{ex_fail} / ATTEMPTING ALTERNATIVE PLAN")
+                __action_name = str(plan[0])
+                if __action_name not in __actions_to_avoid:
+                    __actions_to_avoid.append(__action_name)
+                continue
+
+            except Exception as _ex:
+                logging.error(f"{_ex} / ABORTING.")
+                self.abort()
+                raise
+
+        logging.info(f"EXECUTION SUCCEDED!")
+
+    def print_plan_to_console(self, plan: List[Action]):
         if plan:
             plan_str = '\nPLAN:\n'
             for ix, action in enumerate(plan):
-                plan_str += "....."*(ix+1) + str(action) + ' --> ' + str(action.effects) + '\n'
+                plan_str += "----- "*(ix+1) + str(action) + ' -- ' + str(action.effects) + '\n'
             print(plan_str)
 
     def execute_action(self, action: Action):

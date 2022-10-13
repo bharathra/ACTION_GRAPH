@@ -4,13 +4,17 @@ from action_graph.action import Action, ActionStatus, State
 from action_graph.agent import Agent
 
 name = 'action_graph'
-__version__ = '1.2.0'
+__version__ = '1.2.1'
 __all__ = [
+    'State',
     'Action',
     'ActionStatus',
-    'Agent',
-    'State',
+    'ActionFailedException',
+    'ActionAbortedException',
+    'ActionTimedOutException',
     'Planner',
+    'PlanningFailedException',
+    'Agent',
     'name'
     '__version__',
 ]

@@ -35,6 +35,7 @@ class DoNuclearFission(Action):
         print('Nuclear fission FAILED!!!...')
         self.status = ActionStatus.FAILURE
 
+
 class WaitForThunderStorm(Action):
     effects = {"has_power": ...}
     preconditions: State = {"predict_lightening_strike": True}
@@ -48,6 +49,7 @@ class WaitForThunderStorm(Action):
         print(f">>>{outcome['has_power']} available...")
         return super().on_success(outcome)
 
+
 class AccelerateToCriticalSpeed(Action):
     effects: State = {"critical_speed": ...}
     preconditions: State = {"has_power": "$required_power"}
@@ -55,6 +57,7 @@ class AccelerateToCriticalSpeed(Action):
     def on_execute(self, desired_state: State):
         print(f"Accelerating {self.agent.state['has_car']} to {self.effects['critical_speed']}...")
         self.status = ActionStatus.SUCCESS  # Ensure the action status is set
+
 
 class GetCar(Action):
     effects: State = {"has_car": ...}
@@ -88,5 +91,9 @@ if __name__ == "__main__":
     # plan = ai.get_plan(goal_state)
     # ai.execute_plan(plan)
     #
-    # option 2
-    ai.achieve_goal(goal_state, verbose=True)
+    # # option 2
+    # ai.achieve_goal(goal_state, verbose=True)
+    #
+    # # option 3
+    for plan in ai.achieve_goal_interactive(goal_state):
+        ai.print_plan_to_console(plan)

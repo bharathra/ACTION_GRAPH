@@ -15,7 +15,7 @@ setup(
         "Bug Tracker": "https://github.com/bharathra/action_graph/issues",
     },
     license='MIT',
-    author='Bharath Rao Achyutha',
+    author='Bharath Achyutha Rao',
     author_email='bharath.rao@hotmail.com',
     description='Autonomous agent for task/action planning and execution',
     long_description=long_description,
