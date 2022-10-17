@@ -110,7 +110,7 @@ class Agent:
 
             except Exception as _ex:
                 logging.error(f"{_ex} / ABORTING.")
-                self.abort()
+                # self.abort()
                 raise
 
         logging.info(f"EXECUTION SUCCEDED!")
@@ -146,7 +146,7 @@ class Agent:
 
             except Exception as _ex:
                 logging.error(f"{_ex} / ABORTING.")
-                self.abort()
+                # self.abort()
                 raise
 
         logging.info(f"EXECUTION SUCCEDED!")
@@ -179,7 +179,6 @@ class Agent:
 
             except Exception as _ex:
                 logging.error(f"{_ex} / ABORTING.")
-                self.abort()
                 raise
 
         logging.info(f"EXECUTION SUCCEDED!")
