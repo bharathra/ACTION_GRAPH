@@ -109,8 +109,7 @@ class Agent:
                 self.execute_action(action)
 
             except Exception as _ex:
-                logging.error(f"{_ex} / ABORTING.")
-                # self.abort()
+                logging.error(f"{_ex}")
                 raise
 
         logging.info(f"EXECUTION SUCCEDED!")
@@ -145,8 +144,7 @@ class Agent:
                 continue
 
             except Exception as _ex:
-                logging.error(f"{_ex} / ABORTING.")
-                # self.abort()
+                logging.error(f"{_ex}")
                 raise
 
         logging.info(f"EXECUTION SUCCEDED!")
@@ -178,7 +176,7 @@ class Agent:
                 continue
 
             except Exception as _ex:
-                logging.error(f"{_ex} / ABORTING.")
+                logging.error(f"{_ex}")
                 raise
 
         logging.info(f"EXECUTION SUCCEDED!")

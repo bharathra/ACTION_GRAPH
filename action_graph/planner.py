@@ -52,7 +52,7 @@ class Planner():
         if avoid_actions:  # actions we do not want to consider for planning
             probable_actions = [a for a in probable_actions if str(a) not in avoid_actions]
         if not probable_actions:
-            return [ImpossibleAction({tk: tv}).action]
+            return [ImpossibleAction()]
 
         chosen_path: List[Action] = []
         for p_action in probable_actions:  # explore each available action...
@@ -78,7 +78,7 @@ class Planner():
                 chosen_path = action_path
 
         # check if path is feasible; path cost should be < infinite cost
-        impossible_actions = [a for a in chosen_path if a.cost > sys.float_info.max]
+        impossible_actions = [a for a in chosen_path if a.cost >= sys.float_info.max]
         for ia in impossible_actions:
             raise PlanningFailedException(f'No action available to satisfy: {ia.effects}')
         return chosen_path

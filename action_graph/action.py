@@ -98,13 +98,11 @@ class Action():
         return a_copy
 
 
-class ImpossibleAction():
+class ImpossibleAction(Action):
+    cost = float('inf')
 
-    action = Action()
-
-    def __init__(self, effects: State) -> None:
-        self.action.cost = float('inf')
-        self.action.effects = effects
+    def on_execute(self, outcome: State):
+        self.status = ActionStatus.ABORTED
 
 
 class ActionFailedException(Exception):
