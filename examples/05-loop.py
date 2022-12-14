@@ -5,17 +5,20 @@ from action_graph.agent import Agent
 
 
 class FibonacciIncrement(Action):
-    effects = {"value": ...}
+    effects = {"counter": ...}
 
     def apply_effects(self, outcome: State, state: State):
-        next_num = state["last_num"] + 1
-        state["value"] = state["value"] + next_num
-        state["last_num"] = next_num
+        # store the sum in the state
+        state["fibonacci_sum"] = state["fibonacci_sum"] + state["counter"] + 1
+        # now apply effects
+        # dont apply the final effect(base class implementation); 
+        # instead increment by 1
+        state["counter"] = state["counter"] + 1
 
 
 if __name__ == "__main__":
-    world_state = {"value": 0, "last_num": 0}
-    goal_state = {"last_num": 10}
+    world_state = {"fibonacci_sum": 0, "counter": 0}
+    goal_state = {"counter": 10}
 
     ai = Agent()
 
@@ -33,3 +36,4 @@ if __name__ == "__main__":
     # # option 3
     for plan in ai.achieve_goal_interactive(goal_state):
         ai.print_plan_to_console(plan)
+    print(ai.state['fibonacci_sum'])

@@ -52,7 +52,7 @@ class Planner():
         if avoid_actions:  # actions we do not want to consider for planning
             probable_actions = [a for a in probable_actions if str(a) not in avoid_actions]
         if not probable_actions:
-            return [ImpossibleAction()]
+            return [ImpossibleAction(effects={tk: tv})]
 
         chosen_path: List[Action] = []
         for p_action in probable_actions:  # explore each available action...

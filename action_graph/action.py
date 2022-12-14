@@ -101,6 +101,11 @@ class Action():
 class ImpossibleAction(Action):
     cost = float('inf')
 
+    def __init__(self, agent=None, effects=None) -> None:
+        super().__init__(agent)
+        if effects:
+            self.effects = effects
+
     def on_execute(self, outcome: State):
         self.status = ActionStatus.ABORTED
 
