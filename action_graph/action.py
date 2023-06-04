@@ -68,7 +68,8 @@ class Action():
     def apply_effects(self, outcome: State, state: State):
         # update the state with the predicted outcomes
         for k, v in self.effects.items():
-            state[k] = v
+            if v is not Ellipsis:
+                state[k] = v
 
     def __repr__(self) -> str:
         return self.__class__.__name__
