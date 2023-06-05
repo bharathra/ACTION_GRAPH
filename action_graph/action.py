@@ -23,7 +23,6 @@ class Action():
 
     effects: State = {}
     preconditions: State = {}
-    services = []  # effects whose state value is variable (Ellipsis)
 
     cost: float = 1.0
     status: ActionStatus = ActionStatus.SUCCESS
@@ -33,9 +32,6 @@ class Action():
     def __init__(self, agent=None) -> None:
         self.agent = agent
         self.__exec_thread: Thread = Thread(target=self.on_execute, args=())
-        for k, v in self.effects.items():
-            if v is Ellipsis:
-                self.services.append(k)
 
     def check_runtime_precondition(self, outcome: State) -> bool:
         return True
@@ -72,8 +68,6 @@ class Action():
     def apply_effects(self, outcome: State, state: State):
         # update the state with the predicted outcomes
         for k, v in self.effects.items():
-            if k in self.services:
-                continue
             state[k] = v
 
     def __repr__(self) -> str:
