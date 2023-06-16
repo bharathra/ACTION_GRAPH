@@ -40,7 +40,8 @@ class Planner():
             raise PlanningFailedException('target_state should have a single state variable')
         tk, tv = list(target_state.items())[0]
         # in case target state value is a reference to another state variable
-        tv = self.__parse_references(tv, start_state)
+        if isinstance(tv, str) and tv[0] == '@':
+            tv = self.__parse_references(tv, start_state)
         # check if the target state is already satisfied
         if (tk, tv) in list(start_state.items()):
             return []   # goal already met, move on
@@ -63,7 +64,8 @@ class Planner():
             action_path: List[Action] = []
             for pk, pv in action.preconditions.items():  # for each pre-condition ...
                 try:  # choose the shortest feasible path
-                    pv = self.__parse_references(pv, action.effects)
+                    if isinstance(pv, str) and pv[0] == '$':
+                        pv = self.__parse_references(pv, action.effects)
                     action_path += self.generate_plan({pk: pv}, start_state, avoid_actions)  # merge the actions
                 except RecursionError:  # watch out for cyclic references
                     raise PlanningFailedException(f'Found cyclic references!')
@@ -91,9 +93,8 @@ class Planner():
         return action_lookup
 
     def __parse_references(self, ref: Any, state: State) -> Any:
-        if isinstance(ref, str) and ref[0] == '$':
-            if ref[1:] in state:
-                return state[ref[1:]]
+        if ref[1:] in state:
+            return state[ref[1:]]
         return ref
 
     def __make_unique(self, path):

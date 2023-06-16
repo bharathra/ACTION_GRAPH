@@ -40,13 +40,9 @@ def test():
 
     actions = [a(ai) for a in Action.__subclasses__()]
     ai.load_actions(actions)
-
-    print("Initial State:", world_state)
     ai.update_state(world_state)
-
-    print("Goal State:   ", goal_state)
     plan = ai.get_plan(goal_state)
-    
+
     expected_actions = ["Action1", "Action2", "Action3", "Action4", "Action5"]
     expected_outcome = [{'FIRST': True}, {'SECOND': 'TESTSTATE'}, {'THIRD': 'TESTSTATE'}, {'FOURTH': 'TESTSTATE'}, {'FINAL': True}]
 
