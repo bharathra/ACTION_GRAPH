@@ -28,7 +28,7 @@ class ApplyForDriversLicense(Action):
 
 class FillGas(Action):
     effects = {"tank_has_gas": True}
-    preconditions = {"has_car": "$has_car"}  # has the car that was requested
+    # preconditions = {"has_car": "@has_car"}  # has the car that was requested
 
     def on_execute(self, outcome: State):
         print(f"Filling gas into>>>{self.agent.state['has_car']}")

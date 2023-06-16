@@ -52,7 +52,7 @@ class WaitForThunderStorm(Action):
 
 class AccelerateToCriticalSpeed(Action):
     effects: State = {"critical_speed": ...}
-    preconditions: State = {"has_power": "$required_power"}
+    preconditions: State = {"has_power": "@required_power"}
 
     def on_execute(self, desired_state: State):
         print(f"Accelerating {self.agent.state['has_car']} to {self.effects['critical_speed']}...")
