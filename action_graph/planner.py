@@ -93,8 +93,8 @@ class Planner():
         return action_lookup
 
     def __parse_references(self, ref: Any, state: State) -> Any:
-        if ref[1:] in state:
-            return state[ref[1:]]
+        while ref[1:] in state:
+            ref = state[ref[1:]]
         return ref
 
     def __make_unique(self, path):

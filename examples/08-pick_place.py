@@ -1,6 +1,4 @@
-
-import sys
-sys.path.append('/home/bharath/dev/labs/ACTION_GRAPH/')
+#! /usr/bin/env python3
 
 from action_graph.action import Action
 from action_graph.agent import Agent
