@@ -156,23 +156,25 @@ class Agent:
         :param goal:State: Desired goal state
         """
 
-        __actions_to_avoid: List[str] = []
+        blacklisted_actions: List[str] = []
 
         # state might have changed since the last step was executed
         while not self.is_goal_met(goal):
 
             try:
                 # (re)generate the plan
-                plan: List[Action] = self.__planner.generate_plan(goal, self.state, __actions_to_avoid)
+                plan: List[Action] = self.__planner.generate_plan(goal, self.state, blacklisted_actions)
                 yield plan
                 # execute one plan step at a time
                 self.execute_action(plan[0])
+                # if this execution is successful
+                blacklisted_actions.clear()  # reset any blacklisted actions
 
             except ActionFailedException as ex_fail:
                 logging.error(f"{ex_fail} / ATTEMPTING ALTERNATIVE PLAN")
                 __action_name = str(plan[0])
-                if __action_name not in __actions_to_avoid:
-                    __actions_to_avoid.append(__action_name)
+                if __action_name not in blacklisted_actions:
+                    blacklisted_actions.append(__action_name)
                 continue
 
             except Exception as _ex:
