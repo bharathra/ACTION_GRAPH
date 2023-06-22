@@ -37,7 +37,7 @@ class Planner():
         """
 
         if len(target_state.items()) > 1:
-            raise PlanningFailedException('target_state should have a single state variable')
+            raise PlanningFailedException(f'target_state [{target_state}] should be a single state')
         tk, tv = list(target_state.items())[0]
         # in case target state value is a reference to another state variable
         if isinstance(tv, str) and tv[0] == '@':
@@ -68,7 +68,7 @@ class Planner():
                         pv = self.__parse_references(pv, action.effects)
                     action_path += self.generate_plan({pk: pv}, start_state, avoid_actions)  # merge the actions
                 except RecursionError:  # watch out for cyclic references
-                    raise PlanningFailedException(f'Found cyclic references!')
+                    raise PlanningFailedException(f'Found cyclic references! {pk}:{pv}')
             # include the current action;  remove duplicates; keep the order intact
             action_path = self.__make_unique(action_path + [action])
             #
