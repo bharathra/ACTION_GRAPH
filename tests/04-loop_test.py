@@ -24,7 +24,7 @@ def test():
     actions = [a(ai) for a in Action.__subclasses__()]
     ai.load_actions(actions)
     ai.update_state(world_state)
-    for plan in ai.achieve_goal_interactive(goal_state):
+    for plan in ai.plan_and_execute(goal_state):
         pass
 
     assert ai.state["fibonacci_sum"] == 55, f'Looping feature broken!'

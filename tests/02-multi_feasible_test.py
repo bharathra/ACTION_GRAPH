@@ -10,24 +10,24 @@ class ActionA(Action):
 
 
 class ActionB1(Action):
-    effects = {"SECOND": True}
-    preconditions = {"FIRST": True}
+    effects = {"B": True}
+    preconditions = {"A": True}
 
 
 class ActionB2(Action):
-    effects = {"SECOND": True}
+    effects = {"B": True}
     preconditions = {}
     cost = 1.5
 
 
 class ActionC(Action):
-    effects = {"THIRD": True}
-    preconditions = {"FIRST": True, "SECOND": True}
+    effects = {"C": True}
+    preconditions = {"A": True, "B": True}
 
 
 def test():
-    world_state = {"FIRST": False, "SECOND": False, "THIRD": False}
-    goal_state = {"THIRD": True}
+    world_state = {"A": False, "B": False, "C": False}
+    goal_state = {"C": True}
 
     ai = Agent()
 
@@ -37,7 +37,7 @@ def test():
     plan = ai.get_plan(goal_state)
 
     expected_actions = ["ActionA", "ActionB2", "ActionC"]
-    expected_outcome = [{'FIRST': True}, {'SECOND': True}, {'THIRD': True}]
+    expected_outcome = [{'A': True}, {'B': True}, {'C': True}]
 
     for ax, eax, eoc in zip(plan, expected_actions, expected_outcome):
         assert ax.__class__.__name__ == eax, f'Incorrect Action!'

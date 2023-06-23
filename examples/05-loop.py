@@ -11,7 +11,7 @@ class FibonacciIncrement(Action):
         # store the sum in the state
         state["fibonacci_sum"] = state["fibonacci_sum"] + state["counter"] + 1
         # now apply effects
-        # dont apply the final effect(base class implementation); 
+        # dont apply the final effect(base class implementation);
         # instead increment by 1
         state["counter"] = state["counter"] + 1
 
@@ -30,10 +30,7 @@ if __name__ == "__main__":
 
     print("Goal State:   ", goal_state)
     #
-    # # option 1
-    # ai.achieve_goal(goal_state, verbose=True)
-    #
-    # # option 3
-    for plan in ai.achieve_goal_interactive(goal_state):
-        ai.print_plan_to_console(plan)
+    # # option 2
+    for plan in ai.plan_and_execute(goal_state, verbose=True):
+        input()
     print(ai.state['fibonacci_sum'])

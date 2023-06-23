@@ -39,8 +39,5 @@ if __name__ == "__main__":
     ai.execute_plan(plan)
     #
     # # option 2
-    # ai.achieve_goal(goal_state, verbose=True)
-    #
-    # # option 3
-    # for plan in ai.achieve_goal_interactive(goal_state):
-    #     ai.print_plan_to_console(plan)
+    for plan in ai.plan_and_execute(goal_state, verbose=True):
+        input()

@@ -2,7 +2,7 @@
 
 import logging
 from time import sleep, time
-from typing import List
+from typing import Iterable, List
 
 from action_graph.action import (Action, ActionStatus, State,
                                  ActionTimedOutException, ActionAbortedException, ActionFailedException)
@@ -21,6 +21,7 @@ class Agent:
         self.name = agent_name
         #
         self.state: State = {}
+        self.__actions: List[Action] = []
 
     def load_actions(self, actions: List[Action]):
         """
@@ -29,6 +30,7 @@ class Agent:
         :param actions:List[Action]: List of actions.
         """
 
+        self.__actions = actions
         self.__planner.update_actions(actions)
 
     def update_state(self, state: State):
@@ -122,25 +124,32 @@ class Agent:
         :param verbose:bool: Print plan to console at each step, if True
         """
 
-        __actions_to_avoid: List[str] = []
+        blacklisted_actions: List[str] = []
 
         # state might have changed since the last step was executed
         while not self.is_goal_met(goal):
 
             try:
                 # (re)generate the plan
-                plan: List[Action] = self.__planner.generate_plan(goal, self.state, __actions_to_avoid)
+                plan: List[Action] = self.__planner.generate_plan(goal, self.state, blacklisted_actions)
                 if verbose:
                     self.print_plan_to_console(plan)
                 # execute one plan step at a time
-                __action = plan[0]
-                self.execute_action(__action)
+                first_action = plan[0]
+                self.execute_action(first_action)
+
+                # if the latest executed action has the same effect as any of the blacklisted actions,
+                # then it is prudent(?) to remove such a blacklisted action
+                ba: List[Action] = [a for a in self.__actions if str(a) in blacklisted_actions]
+                for action in ba:
+                    if set(first_action.effects.keys()) <= set(action.effects.keys()):
+                        blacklisted_actions.remove(str(action))
 
             except ActionFailedException as ex_fail:
                 logging.error(f"{ex_fail} / ATTEMPTING ALTERNATIVE PLAN")
-                __action_name = str(__action)
-                if __action_name not in __actions_to_avoid:
-                    __actions_to_avoid.append(__action_name)
+                __action_name = str(first_action)
+                if __action_name not in blacklisted_actions:
+                    blacklisted_actions.append(__action_name)
                 continue
 
             except Exception as _ex:
@@ -149,11 +158,12 @@ class Agent:
 
         logging.info(f"EXECUTION SUCCEDED!")
 
-    def achieve_goal_interactive(self, goal: State):
+    def plan_and_execute(self, goal: State, verbose: bool = False) -> Iterable:
         """
         Creates a plan to satisfy the goal state; executes it action-by-action; re-evaluates the plan at each step;
 
         :param goal:State: Desired goal state
+        :param verbose:bool: if True, prints formatted plan to console at each step
         """
 
         blacklisted_actions: List[str] = []
@@ -164,17 +174,27 @@ class Agent:
             try:
                 # (re)generate the plan
                 plan: List[Action] = self.__planner.generate_plan(goal, self.state, blacklisted_actions)
-                yield plan
+                # print formatted plan to console
+                if verbose:
+                    self.print_plan_to_console(plan)
+
+                yield plan  # yields plan before execution
+
                 # execute one plan step at a time
-                self.execute_action(plan[0])
-                # if this execution is successful
-                blacklisted_actions.clear()  # reset any blacklisted actions
+                first_action = plan[0]
+                self.execute_action(first_action)
+                #
+                # if the latest executed action has the same effect as any of the blacklisted actions,
+                # then it is prudent(?) to remove such a blacklisted action
+                ba: List[Action] = [a for a in self.__actions if str(a) in blacklisted_actions]
+                for action in ba:
+                    if set(first_action.effects.keys()) <= set(action.effects.keys()):
+                        blacklisted_actions.remove(str(action))
 
             except ActionFailedException as ex_fail:
                 logging.error(f"{ex_fail} / ATTEMPTING ALTERNATIVE PLAN")
-                __action_name = str(plan[0])
-                if __action_name not in blacklisted_actions:
-                    blacklisted_actions.append(__action_name)
+                if str(first_action) not in blacklisted_actions:
+                    blacklisted_actions.append(str(first_action))
                 continue
 
             except Exception as _ex:
