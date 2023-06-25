@@ -32,5 +32,6 @@ if __name__ == "__main__":
     #
     # # option 2
     for plan in ai.plan_and_execute(goal_state, verbose=True):
-        input()
+        pass  # input()
+
     print(ai.state['fibonacci_sum'])

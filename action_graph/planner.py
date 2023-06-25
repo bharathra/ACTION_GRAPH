@@ -40,8 +40,7 @@ class Planner():
             raise PlanningFailedException(f'target_state [{target_state}] should be a single state')
         tk, tv = list(target_state.items())[0]
         # in case target state value is a reference to another state variable
-        if isinstance(tv, str) and tv[0] == '@':
-            tv = self.__parse_references(tv, start_state)
+        tv = self.__parse_references(tv, start_state, '@')
         # check if the target state is already satisfied
         if (tk, tv) in list(start_state.items()):
             return []   # goal already met, move on
@@ -64,9 +63,8 @@ class Planner():
             action_path: List[Action] = []
             for pk, pv in action.preconditions.items():  # for each pre-condition ...
                 try:  # choose the shortest feasible path
-                    if isinstance(pv, str) and pv[0] == '$':
-                        pv = self.__parse_references(pv, action.effects)
-                    action_path += self.generate_plan({pk: pv}, start_state, avoid_actions)  # merge the actions
+                    pv = self.__parse_references(pv, action.effects, '$')
+                    action_path.extend(self.generate_plan({pk: pv}, start_state, avoid_actions))  # merge the actions
                 except RecursionError:  # watch out for cyclic references
                     raise PlanningFailedException(f'Found cyclic references! {pk}:{pv}')
             # include the current action;  remove duplicates; keep the order intact
@@ -92,8 +90,8 @@ class Planner():
                 action_lookup[(k, v)].append(action)
         return action_lookup
 
-    def __parse_references(self, ref: Any, state: State) -> Any:
-        while ref[1:] in state:
+    def __parse_references(self, ref: Any, state: State, prefix: str) -> Any:
+        while isinstance(ref, str) and ref[0] == prefix and ref[1:] in state:
             ref = state[ref[1:]]
         return ref
 

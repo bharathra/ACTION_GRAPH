@@ -4,7 +4,7 @@ from action_graph.action import Action, ActionStatus, State
 from action_graph.agent import Agent
 
 name = 'action_graph'
-__version__ = '1.3.0'
+__version__ = '1.3.1'
 __all__ = [
     'State',
     'Action',
