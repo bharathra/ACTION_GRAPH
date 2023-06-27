@@ -79,10 +79,20 @@ class Action():
     def __eq__(self, __o: object) -> bool:
         if self.__class__.__name__ == __o.__class__.__name__ and \
                 self.cost == __o.cost and \
-                self.effects == __o.effects and \
+                self.__check_eq__(self.effects, __o.effects) and \
                 self.preconditions == __o.preconditions:
             return True
         return False
+
+    def __check_eq__(self, e1, e2):
+        for k in e1.keys():
+            if k not in e2.keys():
+                return False
+            if e1[k] != e2[k]:
+                if Ellipsis not in [e1[k], e2[k]]:
+                    return False
+            #
+        return True
 
     def __copy__(self):
         # instantiate an object of Action (or its sub-class) type
