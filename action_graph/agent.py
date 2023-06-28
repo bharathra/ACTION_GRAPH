@@ -5,7 +5,8 @@ from time import sleep, time
 from typing import Iterable, List
 
 from action_graph.action import (Action, ActionStatus, State,
-                                 ActionTimedOutException, ActionAbortedException, ActionFailedException)
+                                 ActionTimedOutException, ActionAbortedException, 
+                                 ActionFailedException, ActionPreemptedException)
 from action_graph.planner import Planner, PlanningFailedException
 
 
@@ -14,6 +15,7 @@ class Agent:
 
     __planner: Planner = Planner([])
     __abort: bool = False
+    __preempted: bool = False
 
     def __init__(self, agent_name=None) -> None:
         if not agent_name:
@@ -49,12 +51,20 @@ class Agent:
 
         self.__abort = True
 
+    def preempt(self):
+        """
+        Preempt execution.
+        """
+
+        self.__preempted = True
+
     def reset(self):
         """
-        Resets the abort status back to False in the event abort was triggered.
+        Resets the abort/preempt status back to False in the event abort was triggered.
         """
 
         self.__abort = False
+        self.__preempted = False
 
     def is_goal_met(self, goal: State) -> bool:
         """
@@ -197,6 +207,11 @@ class Agent:
                     blacklisted_actions.append(str(first_action))
                 continue
 
+            except ActionPreemptedException as _ex_preempted:
+                # logging.info(f"{ex_preempted}")
+                self.__preempted = False  # reset preempted status
+                break
+
             except Exception as _ex:
                 logging.error(f"{_ex}")
                 raise
@@ -216,6 +231,12 @@ class Agent:
             # logging.error(f'ACTION: {action} : EXECUTION ABORTED BEFORE START !!')
             action.on_aborted(action.effects)
             raise ActionAbortedException(f'ACTION: {action} FAILED. ABORTED STATE IS ACTIVE!!')
+
+        # Check for preempt status
+        if self.__preempted:
+            # logging.error(f'ACTION: {action} : EXECUTION PREEMPTED BEFORE START !!')
+            action.on_preempted(action.effects)
+            raise ActionPreemptedException(f'EXECUTION PREEMPTED WHILE AT ACTION: {action}')
 
         # Check runtime precondition
         if not action.check_runtime_precondition(action.effects):

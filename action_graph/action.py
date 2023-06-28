@@ -59,6 +59,9 @@ class Action():
     def on_aborted(self, outcome: State = None):
         pass
 
+    def on_preempted(self, outcome: State = None):
+        pass
+
     def on_neutral(self, outcome: State = None):
         pass
 
@@ -129,4 +132,8 @@ class ActionAbortedException(Exception):
 
 
 class ActionTimedOutException(Exception):
+    pass
+
+
+class ActionPreemptedException(Exception):
     pass
