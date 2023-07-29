@@ -6,7 +6,7 @@ from typing import Iterable, List
 
 from action_graph.action import (Action, ActionStatus, State,
                                  ActionTimedOutException, ActionAbortedException, 
-                                 ActionFailedException, ActionPreemptedException)
+                                 ActionFailedException, ActionRevokedException)
 from action_graph.planner import Planner, PlanningFailedException
 
 
@@ -15,7 +15,7 @@ class Agent:
 
     __planner: Planner = Planner([])
     __abort: bool = False
-    __preempted: bool = False
+    __revoked: bool = False
 
     def __init__(self, agent_name=None) -> None:
         if not agent_name:
@@ -51,20 +51,20 @@ class Agent:
 
         self.__abort = True
 
-    def preempt(self):
+    def revoke(self):
         """
-        Preempt execution.
+        Revoke goals.
         """
 
-        self.__preempted = True
+        self.__revoked = True
 
     def reset(self):
         """
-        Resets the abort/preempt status back to False in the event abort was triggered.
+        Resets the abort/revoke status back to False in the event abort was triggered.
         """
 
         self.__abort = False
-        self.__preempted = False
+        self.__revoked = False
 
     def is_goal_met(self, goal: State) -> bool:
         """
@@ -126,48 +126,6 @@ class Agent:
 
         logging.info(f"EXECUTION SUCCEDED!")
 
-    def achieve_goal(self, goal: State, verbose: bool = False):
-        """
-        Creates a plan to satisfy the goal state; executes it action-by-action; re-evaluates the plan at each step;
-
-        :param goal:State: Desired goal state
-        :param verbose:bool: Print plan to console at each step, if True
-        """
-
-        blacklisted_actions: List[str] = []
-
-        # state might have changed since the last step was executed
-        while not self.is_goal_met(goal):
-
-            try:
-                # (re)generate the plan
-                plan: List[Action] = self.__planner.generate_plan(goal, self.state, blacklisted_actions)
-                if verbose:
-                    self.print_plan_to_console(plan)
-                # execute one plan step at a time
-                first_action = plan[0]
-                self.execute_action(first_action)
-
-                # if the latest executed action has the same effect as any of the blacklisted actions,
-                # then it is prudent(?) to remove such a blacklisted action
-                ba: List[Action] = [a for a in self.__actions if str(a) in blacklisted_actions]
-                for action in ba:
-                    if set(first_action.effects.keys()) <= set(action.effects.keys()):
-                        blacklisted_actions.remove(str(action))
-
-            except ActionFailedException as ex_fail:
-                logging.error(f"{ex_fail} / ATTEMPTING ALTERNATIVE PLAN")
-                __action_name = str(first_action)
-                if __action_name not in blacklisted_actions:
-                    blacklisted_actions.append(__action_name)
-                continue
-
-            except Exception as _ex:
-                logging.error(f"{_ex}")
-                raise
-
-        logging.info(f"EXECUTION SUCCEDED!")
-
     def plan_and_execute(self, goal: State, verbose: bool = False) -> Iterable:
         """
         Creates a plan to satisfy the goal state; executes it action-by-action; re-evaluates the plan at each step;
@@ -207,9 +165,9 @@ class Agent:
                     blacklisted_actions.append(str(first_action))
                 continue
 
-            except ActionPreemptedException as _ex_preempted:
-                # logging.info(f"{ex_preempted}")
-                self.__preempted = False  # reset preempted status
+            except ActionRevokedException as _ex_revoked:
+                logging.info(f"{_ex_revoked} / STOPPING.")
+                self.__revoked = False  # reset revoked status
                 break
 
             except Exception as _ex:
@@ -232,11 +190,11 @@ class Agent:
             action.on_aborted(action.effects)
             raise ActionAbortedException(f'ACTION: {action} FAILED. ABORTED STATE IS ACTIVE!!')
 
-        # Check for preempt status
-        if self.__preempted:
-            # logging.error(f'ACTION: {action} : EXECUTION PREEMPTED BEFORE START !!')
-            action.on_preempted(action.effects)
-            raise ActionPreemptedException(f'EXECUTION PREEMPTED WHILE AT ACTION: {action}')
+        # Check for revoked status
+        if self.__revoked:
+            # logging.error(f'ACTION: {action} : EXECUTION REVOKED BEFORE START !!')
+            action.on_revoked(action.effects)
+            raise ActionRevokedException(f'ACTION/GOALS REVOKED WHILE AT ACTION: {action}')
 
         # Check runtime precondition
         if not action.check_runtime_precondition(action.effects):
@@ -256,8 +214,13 @@ class Agent:
         while action.is_running():
             if self.__abort:
                 # if an abort was signalled
-                logging.critical(f'ACTION: {action} : EXECUTION ABORTED!!')
+                # logging.critical(f'ACTION: {action} : EXECUTION ABORTED!!')
                 action.status = ActionStatus.ABORTED
+                break
+            if self.__revoked:
+                # if an revoke was signalled
+                # logging.critical(f'ACTION: {action} : GOALS REVOKED. STOPPING!!')
+                action.status = ActionStatus.REVOKED
                 break
             if time()-time0 > action.timeout:
                 # Action timeout exceeded
@@ -299,6 +262,12 @@ class Agent:
             action.on_aborted(action.effects)
             # Stop execution as action aborted
             raise ActionAbortedException(f'ACTION: {action} ABORTED!')
+
+        # Goals revoked
+        if action.status == ActionStatus.REVOKED:
+            action.on_revoked(action.effects)
+            # Stop execution as goals revoked
+            raise ActionRevokedException(f'ACTION: {action} REVOKED!')
 
         # Any clean up needed after execution e.g. updating system states
         action.on_exit(action.effects)

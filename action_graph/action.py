@@ -17,6 +17,7 @@ class ActionStatus(Enum):
     RUNNING = auto()
     ABORTED = auto()
     NEUTRAL = auto()
+    REVOKED = auto()
 
 
 class Action():
@@ -59,7 +60,7 @@ class Action():
     def on_aborted(self, outcome: State = None):
         pass
 
-    def on_preempted(self, outcome: State = None):
+    def on_revoked(self, outcome: State = None):
         pass
 
     def on_neutral(self, outcome: State = None):
@@ -135,5 +136,5 @@ class ActionTimedOutException(Exception):
     pass
 
 
-class ActionPreemptedException(Exception):
+class ActionRevokedException(Exception):
     pass
