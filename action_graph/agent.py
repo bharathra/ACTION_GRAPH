@@ -180,7 +180,7 @@ class Agent:
         if plan:
             plan_str = '\nPLAN:\n'
             for ix, action in enumerate(plan):
-                plan_str += "----- "*(ix+1) + str(action) + ' -- ' + str(action.effects) + '\n'
+                plan_str += str(ix+1).zfill(2) + ' ' + str(action) + (25-len(str(action)))*'.' + str(action.effects) + '\n'
             print(plan_str)
 
     def execute_action(self, action: Action):

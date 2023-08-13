@@ -91,7 +91,7 @@ class Planner():
         return action_lookup
 
     def __parse_references(self, ref: Any, state: State, prefix: str) -> Any:
-        while isinstance(ref, str) and ref[0] == prefix and ref[1:] in state:
+        while ref and isinstance(ref, str) and ref[0] == prefix and ref[1:] in state:
             ref = state[ref[1:]]
         return ref
 
