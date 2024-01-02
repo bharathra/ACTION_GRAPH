@@ -10,9 +10,9 @@ class Drive(Action):
     effects = {"driving": ...}
     preconditions = {"has_drivers_license": True, "has_car": "$driving", "tank_has_gas": True}
 
-    def on_execute(self, outcome: State):
-        print("Driving car>>>", outcome["driving"])
-        return super().on_execute(outcome)
+    def execute(self):
+        print("Driving car>>>", self.effects["driving"])
+        return super().execute()
 
 
 class ApplyForDriversLicense(Action):
@@ -20,32 +20,32 @@ class ApplyForDriversLicense(Action):
     # simulate async action
     allow_async: bool = True
 
-    def on_execute(self, outcome: State):
+    def execute(self):
         time.sleep(1)
-        print("Drivers ed completed; Have license>>>", outcome["has_drivers_license"])
-        return super().on_execute(outcome)
+        print("Drivers ed completed; Have license>>>", self.effects["has_drivers_license"])
+        return super().execute()
 
 
 class FillGas(Action):
     effects = {"tank_has_gas": True}
     # preconditions = {"has_car": "@has_car"}  # has the car that was requested
 
-    def on_execute(self, outcome: State):
+    def execute(self):
         print(f"Filling gas into>>>{self.agent.state['has_car']}")
-        return super().on_execute(outcome)
+        return super().execute()
 
 
 class RentCar(Action):
     effects = {"has_car": ...}
     preconditions = {"rental_available": "$has_car"}
 
-    def on_execute(self, outcome: State):
+    def execute(self):
         print("Renting car>>>", self.agent.state["has_car"])
-        return super().on_execute(outcome)
+        return super().execute()
 
-    def on_exit(self, expected_outcome: State = None):
+    def on_exit(self):
         print("Rented car>>>", self.agent.state["has_car"])
-        return super().on_exit(expected_outcome)
+        return super().on_exit()
 
 
 class BuyCar(Action):
@@ -53,13 +53,13 @@ class BuyCar(Action):
     preconditions = {}
     cost = 40_000
 
-    def on_execute(self, outcome: State):
-        print(f"Buying car>>>{outcome['has_car']}")
-        return super().on_execute(outcome)
+    def execute(self):
+        print(f"Buying car>>>{self.effects['has_car']}")
+        return super().execute()
 
-    def on_exit(self, expected_outcome: State = None):
+    def on_exit(self):
         print("Bought car>>>", self.agent.state["has_car"])
-        return super().on_exit(expected_outcome)
+        return super().on_exit()
 
 
 if __name__ == "__main__":
@@ -72,14 +72,11 @@ if __name__ == "__main__":
     ai.load_actions(actions)
 
     print("Initial State:", world_state)
-    ai.update_state(world_state)
+    ai.state = world_state
 
     print("Goal State:   ", goal_state)
     #
-    # # option 1
     # plan = ai.get_plan(goal_state)
-    # ai.execute_plan(plan)
-    #
-    # # option 2
-    for plan in ai.plan_and_execute(goal_state, verbose=True):
-        pass  # input()
+    # ai.print_plan_to_console(plan)
+    for plan in ai.plan_and_execute(goal_state):
+        ai.print_plan_to_console(plan)

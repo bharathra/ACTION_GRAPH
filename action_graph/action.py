@@ -12,12 +12,10 @@ class State(dict):
 
 
 class ActionStatus(Enum):
-    FAILURE = auto()
-    SUCCESS = auto()
-    RUNNING = auto()
-    ABORTED = auto()
     NEUTRAL = auto()
-    REVOKED = auto()
+    RUNNING = auto()
+    SUCCESS = auto()
+    FAILURE = auto()
 
 
 class Action():
@@ -26,23 +24,23 @@ class Action():
     preconditions: State = {}
 
     cost: float = 1.0
-    status: ActionStatus = ActionStatus.SUCCESS
+    status: ActionStatus = ActionStatus.NEUTRAL
     timeout: float = 86_400.0  # 24 hours
     allow_async: bool = False
 
     def __init__(self, agent=None) -> None:
         self.agent = agent
-        self.__exec_thread: Thread = Thread(target=self.on_execute, args=())
+        self.__exec_thread: Thread = Thread(target=self.execute, args=())
 
-    def check_runtime_precondition(self, outcome: State) -> bool:
+    def check_runtime_precondition(self) -> bool:
         return True
 
-    def _execute(self, outcome: State):
+    def _execute(self):
         self.status = ActionStatus.RUNNING
-        self.__exec_thread = Thread(target=self.on_execute, args=(outcome,))
+        self.__exec_thread = Thread(target=self.execute)
         self.__exec_thread.start()
 
-    def on_execute(self, outcome: State):
+    def execute(self):
         # NOTE: Any overrides of this method has to explicitly set
         # the status either one of SUCCESS, FAILURE, ABORTED;
         # otherwise, status will be treated as FAILURE
@@ -51,25 +49,27 @@ class Action():
     def is_running(self):
         return self.__exec_thread.is_alive()
 
-    def on_success(self, outcome: State = None):
+    def on_success(self):
         pass
 
-    def on_failure(self, outcome: State = None):
+    def on_failure(self):
         pass
 
-    def on_aborted(self, outcome: State = None):
+    def undo(self):
         pass
 
-    def on_revoked(self, outcome: State = None):
+    def abort(self):
         pass
 
-    def on_neutral(self, outcome: State = None):
+    def on_exit(self):
         pass
 
-    def on_exit(self, outcome: State = None):
-        pass
+    def clear_effects(self, state: State):
+        # update the state with the predicted outcomes
+        for k, v in self.effects.items():
+            state[k] = ''
 
-    def apply_effects(self, outcome: State, state: State):
+    def apply_effects(self, state: State):
         # update the state with the predicted outcomes
         for k, v in self.effects.items():
             state[k] = v
@@ -120,21 +120,5 @@ class ImpossibleAction(Action):
         if effects:
             self.effects = effects
 
-    def on_execute(self, outcome: State):
-        self.status = ActionStatus.ABORTED
-
-
-class ActionFailedException(Exception):
-    pass
-
-
-class ActionAbortedException(Exception):
-    pass
-
-
-class ActionTimedOutException(Exception):
-    pass
-
-
-class ActionRevokedException(Exception):
-    pass
+    def execute(self):
+        self.status = ActionStatus.FAILURE

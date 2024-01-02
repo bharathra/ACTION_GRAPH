@@ -48,9 +48,10 @@ if __name__ == "__main__":
     ai.update_state(world_state)
 
     print("Goal State:   ", goal_state)
-    plan = ai.get_plan(goal_state)
-
-    # ai.execute_plan(plan)
-
+    
+    # plan = ai.get_plan(goal_state)
+    # ai.print_plan_to_console(plan)
+    for plan in ai.plan_and_execute(goal_state):
+        ai.print_plan_to_console(plan)
 ```
 

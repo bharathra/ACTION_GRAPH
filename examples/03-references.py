@@ -8,22 +8,22 @@ class GoBackToTheFuture(Action):
     effects = {"year": "1985"}
     preconditions = {"year": "1955", "has_time_machine": True, "critical_speed": "88mph"}
 
-    def on_execute(self, desired_state: State):
+    def execute(self):
         print('Going Back to the future...')
-        return super().on_execute(desired_state)
+        return super().execute()
 
-    def on_exit(self, outcome: State = None):
+    def on_exit(self):
         print('>>>Arrived in the year:', self.agent.state["year"])
-        return super().on_exit(outcome)
+        return super().on_exit()
 
 
 class MakeTimeMachine(Action):
     effects = {"has_time_machine": True}
     preconditions = {"has_car": "Delorean"}
 
-    def on_execute(self, desired_state: State):
+    def execute(self):
         print('Making Time Machine...')
-        return super().on_execute(desired_state)
+        return super().execute()
 
 
 class DoNuclearFission(Action):
@@ -31,7 +31,7 @@ class DoNuclearFission(Action):
     preconditions: State = {"have_fuel": "plutonium"}
     cost: float = 10000
 
-    def on_execute(self, outcome: State):
+    def execute(self):
         print('Nuclear fission FAILED!!!...')
         self.status = ActionStatus.FAILURE
 
@@ -41,20 +41,20 @@ class WaitForThunderStorm(Action):
     preconditions: State = {"predict_lightening_strike": True}
     cost: float = 1000000
 
-    def on_execute(self, desired_state: State):
+    def execute(self):
         print('Waiting for thunderstorm...')
         self.status = ActionStatus.SUCCESS  # Ensure the action status is set
 
-    def on_success(self, outcome: State = None):
-        print(f">>>{outcome['has_power']} available...")
-        return super().on_success(outcome)
+    def on_success(self):
+        print(f">>>{self.effects['has_power']} available...")
+        return super().on_success()
 
 
 class AccelerateToCriticalSpeed(Action):
     effects: State = {"critical_speed": ...}
     preconditions: State = {"has_power": "@required_power"}
 
-    def on_execute(self, desired_state: State):
+    def execute(self):
         print(f"Accelerating {self.agent.state['has_car']} to {self.effects['critical_speed']}...")
         self.status = ActionStatus.SUCCESS  # Ensure the action status is set
 
@@ -63,9 +63,9 @@ class GetCar(Action):
     effects: State = {"has_car": ...}
     preconditions: State = {"year": "1955", "car_at_doc_browns_lab": "$has_car"}
 
-    def on_execute(self, desired_state: State):
-        print(f"Getting Car: {desired_state['has_car']} ...")
-        return super().on_execute(desired_state)
+    def execute(self):
+        print(f"Getting Car: {['has_car']} ...")
+        return super().execute()
 
 
 if __name__ == "__main__":
@@ -83,14 +83,11 @@ if __name__ == "__main__":
     ai.load_actions(actions)
 
     print("Initial State:", world_state)
-    ai.update_state(world_state)
+    ai.state = world_state
 
     print("Goal State:   ", goal_state)
     #
-    # # option 1
     # plan = ai.get_plan(goal_state)
-    # ai.execute_plan(plan)
-    #
-    # # option 2
-    for plan in ai.plan_and_execute(goal_state, verbose=True):
-        pass  # input()
+    # ai.print_plan_to_console(plan)
+    for plan in ai.plan_and_execute(goal_state):
+        ai.print_plan_to_console(plan)

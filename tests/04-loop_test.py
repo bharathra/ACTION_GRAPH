@@ -7,7 +7,7 @@ from action_graph.agent import Agent
 class FibonacciIncrement(Action):
     effects = {"counter": ...}
 
-    def apply_effects(self, outcome: State, state: State):
+    def apply_effects(self, state: State):
         # store the sum in the state
         state["fibonacci_sum"] = state["fibonacci_sum"] + state["counter"] + 1
         # now apply effects
@@ -23,7 +23,7 @@ def test():
     ai = Agent()
     actions = [a(ai) for a in Action.__subclasses__()]
     ai.load_actions(actions)
-    ai.update_state(world_state)
+    ai.state = world_state
     for plan in ai.plan_and_execute(goal_state):
         pass
 

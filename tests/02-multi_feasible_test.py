@@ -33,7 +33,7 @@ def test():
 
     actions = [a(ai) for a in Action.__subclasses__()]
     ai.load_actions(actions)
-    ai.update_state(world_state)
+    ai.state = world_state
     plan = ai.get_plan(goal_state)
 
     expected_actions = ["ActionA", "ActionB2", "ActionC"]

@@ -1,21 +1,18 @@
 #! /usr/bin/env python3
 
-import logging
 from time import sleep, time
 from typing import Iterable, List
 
-from action_graph.action import (Action, ActionStatus, State,
-                                 ActionTimedOutException, ActionAbortedException, 
-                                 ActionFailedException, ActionRevokedException)
+from action_graph.action import (Action, ActionStatus, State)
 from action_graph.planner import Planner, PlanningFailedException
 
 
 class Agent:
-    """Autonomous agent to monitor system state, keep track of feasible actions, generate plans and achive desired goals"""
+    """Autonomous agent to monitor system state, keep track of feasible actions, 
+    generate plans and achive desired goals"""
 
     __planner: Planner = Planner([])
     __abort: bool = False
-    __revoked: bool = False
 
     def __init__(self, agent_name=None) -> None:
         if not agent_name:
@@ -24,6 +21,7 @@ class Agent:
         #
         self.state: State = {}
         self.__actions: List[Action] = []
+        self.__completed_actions_stack: List[Action] = []
 
     def load_actions(self, actions: List[Action]):
         """
@@ -35,28 +33,13 @@ class Agent:
         self.__actions = actions
         self.__planner.update_actions(actions)
 
-    def update_state(self, state: State):
+    def undo_completed_actions(self):
         """
-        Updates system state with the incoming state.        
-
-        :param state:State: New state
+        Undo previous executions (if possible).
         """
 
-        self.state.update(state)
-
-    def abort(self):
-        """
-        Abort execution.
-        """
-
-        self.__abort = True
-
-    def revoke(self):
-        """
-        Revoke goals.
-        """
-
-        self.__revoked = True
+        while self.__completed_actions_stack:
+            self.__completed_actions_stack.pop().undo()
 
     def reset(self):
         """
@@ -64,7 +47,6 @@ class Agent:
         """
 
         self.__abort = False
-        self.__revoked = False
 
     def is_goal_met(self, goal: State) -> bool:
         """
@@ -83,7 +65,9 @@ class Agent:
 
         return True
 
-    def get_plan(self, goal: State, start_state: State = None, actions: List[Action] = None) -> List[Action]:
+    def get_plan(self, goal: State,
+                 start_state: State = None,
+                 actions: List[Action] = None) -> List[Action]:
         """
         Generate an action plan for the specified goal state.
         If no start_state is provided, the current state of the system is used. 
@@ -106,25 +90,8 @@ class Agent:
             return self.__planner.generate_plan(goal, start_state)
             #
         except PlanningFailedException as pfx:
-            logging.error(f"PLANNING FAILED! {pfx}")
+            print(f"[Agent] Planning failed! {pfx}")
             return []
-
-    def execute_plan(self, plan: List[Action]):
-        """
-        Execute a previously generated plan.
-
-        :param plan:List[Action]: Dictionary of actions and their expected outcomes (State)
-        """
-
-        for action in plan:
-            try:
-                self.execute_action(action)
-
-            except Exception as _ex:
-                logging.error(f"{_ex}")
-                raise
-
-        logging.info(f"EXECUTION SUCCEDED!")
 
     def plan_and_execute(self, goal: State, verbose: bool = False) -> Iterable:
         """
@@ -134,14 +101,14 @@ class Agent:
         :param verbose:bool: if True, prints formatted plan to console at each step
         """
 
-        blacklisted_actions: List[str] = []
+        blocked_actions: List[str] = []
 
         # state might have changed since the last step was executed
         while not self.is_goal_met(goal):
 
             try:
                 # (re)generate the plan
-                plan: List[Action] = self.__planner.generate_plan(goal, self.state, blacklisted_actions)
+                plan: List[Action] = self.__planner.generate_plan(goal, self.state, blocked_actions)
                 # print formatted plan to console
                 if verbose:
                     self.print_plan_to_console(plan)
@@ -150,63 +117,53 @@ class Agent:
 
                 # execute one plan step at a time
                 first_action = plan[0]
-                self.execute_action(first_action)
+                action_status = self.execute_action(first_action)
                 #
-                # if the latest executed action has the same effect as any of the blacklisted actions,
-                # then it is prudent(?) to remove such a blacklisted action
-                ba: List[Action] = [a for a in self.__actions if str(a) in blacklisted_actions]
+                # if the latest executed action has the same effect as any of the blocked actions,
+                # then it is prudent(?) to remove such a blocked action
+                ba: List[Action] = [a for a in self.__actions if str(a) in blocked_actions]
                 for action in ba:
                     if set(first_action.effects.keys()) <= set(action.effects.keys()):
-                        blacklisted_actions.remove(str(action))
+                        blocked_actions.remove(str(action))
 
-            except ActionFailedException as ex_fail:
-                logging.error(f"{ex_fail} / ATTEMPTING ALTERNATIVE PLAN")
-                if str(first_action) not in blacklisted_actions:
-                    blacklisted_actions.append(str(first_action))
-                continue
+                if action_status == ActionStatus.FAILURE:
+                    print(f"[Agent] Action failed! Attempting alternative plan.")
+                    if str(first_action) not in blocked_actions:
+                        blocked_actions.append(str(first_action))
+                    continue
 
-            except ActionRevokedException as _ex_revoked:
-                logging.info(f"{_ex_revoked} / STOPPING.")
-                self.__revoked = False  # reset revoked status
-                break
+                self.__completed_actions_stack.append(first_action)
 
             except Exception as _ex:
-                logging.error(f"{_ex}")
+                print(f"[Agent] Execution failed! {_ex}")
                 raise
 
-        logging.info(f"EXECUTION SUCCEDED!")
+        self.__completed_actions_stack.clear()
+        print(f"[Agent] Execution succeeded!")
 
     def print_plan_to_console(self, plan: List[Action]):
         if plan:
             plan_str = '\nPLAN:\n'
             for ix, action in enumerate(plan):
-                plan_str += str(ix+1).zfill(2) + ' ' + str(action) + (25-len(str(action)))*'.' + str(action.effects) + '\n'
+                plan_str += str(ix+1).zfill(2) + ' ' + \
+                    str(action) + (25-len(str(action)))*'.' + \
+                    str(action.effects) + '\n'
             print(plan_str)
 
-    def execute_action(self, action: Action):
-        # Check for abort status
-        if self.__abort:
-            # logging.error(f'ACTION: {action} : EXECUTION ABORTED BEFORE START !!')
-            action.on_aborted(action.effects)
-            raise ActionAbortedException(f'ACTION: {action} FAILED. ABORTED STATE IS ACTIVE!!')
-
-        # Check for revoked status
-        if self.__revoked:
-            # logging.error(f'ACTION: {action} : EXECUTION REVOKED BEFORE START !!')
-            action.on_revoked(action.effects)
-            raise ActionRevokedException(f'ACTION/GOALS REVOKED WHILE AT ACTION: {action}')
+    def execute_action(self, action: Action) -> ActionStatus:
 
         # Check runtime precondition
-        if not action.check_runtime_precondition(action.effects):
-            raise ActionFailedException(f'ACTION: {action} RUNTIME PRECONDITION CHECK FAILED!!.')
+        if not action.check_runtime_precondition():
+            print(f'[Agent] Action: {action} / Runtime pre-condition check failed!')
+            return ActionStatus.FAILURE
 
         # Execute the plan step
-        action._execute(action.effects)
+        action._execute()
         # action.execute is an async process inside _execute,
 
         if action.allow_async:
             # if this is an async action; just apply the effects and return
-            action.apply_effects(action.effects, self.state)
+            action.apply_effects(self.state)
             return
 
         # monitor the status; wait until execution is complete
@@ -214,60 +171,45 @@ class Agent:
         while action.is_running():
             if self.__abort:
                 # if an abort was signalled
-                # logging.critical(f'ACTION: {action} : EXECUTION ABORTED!!')
-                action.status = ActionStatus.ABORTED
-                break
-            if self.__revoked:
-                # if an revoke was signalled
-                # logging.critical(f'ACTION: {action} : GOALS REVOKED. STOPPING!!')
-                action.status = ActionStatus.REVOKED
+                action.abort()
+                # print(f'[Agent] Action: {action} / Execution aborted!!')
+                action.status = ActionStatus.FAILURE
                 break
             if time()-time0 > action.timeout:
                 # Action timeout exceeded
-                raise ActionTimedOutException(f'ACTION: {action} : TIMED OUT!!')
+                raise Exception(f'[Agent] Action: {action} : Timed out!')
             if not action.status == ActionStatus.RUNNING:
                 # thread is alive but the status has changed
                 break  # so move on
             sleep(0.05)  # throttle loop
-            # logging.debug(f'Action: {str(action)} is running...')
+            # print(f'[Agent] Action: {str(action)} is running...')
 
         # Execution completed but with RUNNING Status
         if action.status == ActionStatus.RUNNING:
             # the user forgot to set the status; or something bad happened;
             # let's treat this as FAILURE!
             action.status = ActionStatus.FAILURE
-            logging.warning(f'ACTION: {action} STATUS UNKNOWN; ASSUMING FAILURE!!')
+            print(f'[Agent] Action: {action} / Status unknown; Assuming failure!')
 
         # Execution completed with NEUTRAL Status
         if action.status == ActionStatus.NEUTRAL:
             # this is when action completes with no change to the state
-            # logging.debug(f'ACTION: {action} Action completed with neutral state.')
-            action.on_neutral(action.effects)  # ignore effects
+            # print(f'[Agent] Action: {action} / Action completed with neutral state.')
+            action.on_neutral()  # ignore effects
 
         # Execution completed with SUCCESS Status
         if action.status == ActionStatus.SUCCESS:
             # Action executed without errors;
-            action.apply_effects(action.effects, self.state)
-            # logging.debug(f'ACTION: {action} Action succeded.')
-            action.on_success(action.effects)
+            action.apply_effects(self.state)
+            # print(f'[Agent] Action: {action} / Action succeded.')
+            action.on_success()
 
         # Execution failed
         if action.status == ActionStatus.FAILURE:
-            action.on_failure(action.effects)
-            # Stop execution as action failed
-            raise ActionFailedException(f'ACTION: {action} FAILED!')
-
-        # Execution aborted
-        if action.status == ActionStatus.ABORTED:
-            action.on_aborted(action.effects)
-            # Stop execution as action aborted
-            raise ActionAbortedException(f'ACTION: {action} ABORTED!')
-
-        # Goals revoked
-        if action.status == ActionStatus.REVOKED:
-            action.on_revoked(action.effects)
-            # Stop execution as goals revoked
-            raise ActionRevokedException(f'ACTION: {action} REVOKED!')
+            action.on_failure()
+            self.undo_completed_actions()
 
         # Any clean up needed after execution e.g. updating system states
-        action.on_exit(action.effects)
+        action.on_exit()
+
+        return action.status

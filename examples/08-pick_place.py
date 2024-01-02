@@ -30,13 +30,11 @@ if __name__ == "__main__":
     ai.load_actions(actions)
 
     print("Initial State:", world_state)
-    ai.update_state(world_state)
+    ai.state = world_state
 
     print("Goal State:   ", goal_state)
+    
     # plan = ai.get_plan(goal_state)
     # ai.print_plan_to_console(plan)
-
     for plan in ai.plan_and_execute(goal_state):
         ai.print_plan_to_console(plan)
-
-    ai.execute_plan(plan)
