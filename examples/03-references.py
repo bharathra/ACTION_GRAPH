@@ -1,5 +1,9 @@
 #! /usr/bin/env python3
 
+import os
+import sys
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
 from action_graph.action import Action, ActionStatus, State
 from action_graph.agent import Agent
 
