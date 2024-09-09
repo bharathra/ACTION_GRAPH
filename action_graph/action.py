@@ -20,25 +20,27 @@ class ActionStatus(Enum):
 
 class Action():
 
+    prior_state: State = {}
     effects: State = {}
     preconditions: State = {}
 
     cost: float = 1.0
     status: ActionStatus = ActionStatus.NEUTRAL
     timeout: float = 86_400.0  # 24 hours
-    allow_async: bool = False
+    async_exec: bool = False
+    auto_reset: bool = False
 
     def __init__(self, agent=None) -> None:
         self.agent = agent
-        self.__exec_thread: Thread = Thread(target=self.execute, args=())
+        self._exec_thread: Thread = Thread(target=self.execute, args=())
 
     def check_runtime_precondition(self) -> bool:
         return True
 
     def _execute(self):
         self.status = ActionStatus.RUNNING
-        self.__exec_thread = Thread(target=self.execute)
-        self.__exec_thread.start()
+        self._exec_thread = Thread(target=self.execute)
+        self._exec_thread.start()
 
     def execute(self):
         # NOTE: Any overrides of this method has to explicitly set
@@ -47,7 +49,10 @@ class Action():
         self.status = ActionStatus.SUCCESS
 
     def is_running(self):
-        return self.__exec_thread.is_alive()
+        return self._exec_thread.is_alive()
+
+    def on_neutral(self):
+        pass
 
     def on_success(self):
         pass
@@ -61,17 +66,19 @@ class Action():
     def abort(self):
         pass
 
+    def reset_effects(self, state: State):
+        # restore the state to the prior state
+        for k, v in self.prior_state.items():
+            state[k] = v
+
     def on_exit(self):
         pass
 
-    def clear_effects(self, state: State):
-        # update the state with the predicted outcomes
-        for k, v in self.effects.items():
-            state[k] = ''
-
     def apply_effects(self, state: State):
-        # update the state with the predicted outcomes
+        # update the state with the effects of the action
         for k, v in self.effects.items():
+            # backup the prior state
+            self.prior_state[k] = state.get(k, Ellipsis)
             state[k] = v
 
     def __repr__(self) -> str:

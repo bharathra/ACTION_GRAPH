@@ -4,8 +4,8 @@ import os
 import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from action_graph.action import Action, State, ActionStatus
-from action_graph.agent import Agent
+if True:
+    from action_graph.agent import Agent, Action, ActionStatus, State
 
 
 class FibonacciIncrement(Action):

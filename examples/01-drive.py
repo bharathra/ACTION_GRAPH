@@ -4,8 +4,8 @@ import os
 import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from action_graph.agent import Agent
-from action_graph.action import Action, State, ActionStatus
+if True:
+    from action_graph.agent import Agent, Action, ActionStatus, State
 
 
 class Drive(Action):
@@ -24,7 +24,7 @@ class RentCar(Action):
     cost = 100  # dollars
 
     # # simulate failure
-    # def on_execute(self, outcome: State):
+    # def execute(self):
     #     print('Rental not available!!')
     #     self.status = ActionStatus.FAILURE
 

@@ -1,14 +1,12 @@
 #! /usr/bin/env python3
 
-
 import os
 import sys
+import time
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-import time
-
-from action_graph.agent import Agent
-from action_graph.action import Action, State
+if True:
+    from action_graph.agent import Agent, Action, ActionStatus, State
 
 
 class Drive(Action):
@@ -23,7 +21,7 @@ class Drive(Action):
 class ApplyForDriversLicense(Action):
     effects: State = {"has_drivers_license": True}
     # simulate async action
-    allow_async: bool = True
+    async_exec: bool = True
 
     def execute(self):
         time.sleep(1)

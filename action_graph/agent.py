@@ -11,7 +11,7 @@ class Agent:
     """Autonomous agent to monitor system state, keep track of feasible actions, 
     generate plans and achive desired goals"""
 
-    __planner: Planner = Planner([])
+    __planner: Planner = Planner()
     __abort: bool = False
 
     def __init__(self, agent_name=None) -> None:
@@ -134,14 +134,32 @@ class Agent:
 
                 self.__completed_actions_stack.append(first_action)
 
+            except PlanningFailedException as pfx:
+                print(f"[Agent] Planning failed! {pfx}")
+                print(f"[Agent] Will attempt to undo previous actions")
+                self.undo_actions(self.__completed_actions_stack)
+                return
+
             except Exception as _ex:
                 print(f"[Agent] Execution failed! {_ex}")
                 raise
+
+        # for those actions that require auto-reset,
+        # reset their effects to the prior state
+        for action in self.__completed_actions_stack:
+            if action.auto_reset:
+                action.reset_effects(self.state)
 
         self.__completed_actions_stack.clear()
         print(f"[Agent] Execution succeeded!")
 
     def print_plan_to_console(self, plan: List[Action]):
+        """
+        Print the plan to console in a formatted manner.
+
+        :param plan:List[Action]: List of actions in the plan
+        """
+
         if plan:
             plan_str = '\nPLAN:\n'
             for ix, action in enumerate(plan):
@@ -151,6 +169,12 @@ class Agent:
             print(plan_str)
 
     def execute_action(self, action: Action) -> ActionStatus:
+        """
+        Execute an action and monitor its status.
+
+        :param action:Action: Action to be executed
+        :return:ActionStatus: Status of the action execution
+        """
 
         # Check runtime precondition
         if not action.check_runtime_precondition():
@@ -161,7 +185,7 @@ class Agent:
         action._execute()
         # action.execute is an async process inside _execute,
 
-        if action.allow_async:
+        if action.async_exec:
             # if this is an async action; just apply the effects and return
             action.apply_effects(self.state)
             return
@@ -178,38 +202,43 @@ class Agent:
             if time()-time0 > action.timeout:
                 # Action timeout exceeded
                 raise Exception(f'[Agent] Action: {action} : Timed out!')
-            if not action.status == ActionStatus.RUNNING:
+            if action.status != ActionStatus.RUNNING:
                 # thread is alive but the status has changed
                 break  # so move on
             sleep(0.05)  # throttle loop
             # print(f'[Agent] Action: {str(action)} is running...')
 
-        # Execution completed but with RUNNING Status
         if action.status == ActionStatus.RUNNING:
             # the user forgot to set the status; or something bad happened;
             # let's treat this as FAILURE!
             action.status = ActionStatus.FAILURE
             print(f'[Agent] Action: {action} / Status unknown; Assuming failure!')
 
-        # Execution completed with NEUTRAL Status
         if action.status == ActionStatus.NEUTRAL:
             # this is when action completes with no change to the state
             # print(f'[Agent] Action: {action} / Action completed with neutral state.')
             action.on_neutral()  # ignore effects
 
-        # Execution completed with SUCCESS Status
+        if action.status == ActionStatus.FAILURE:
+            # Action execution failed
+            print(f'[Agent] Action: {action} / Action Failed!')
+            action.on_failure()
+
         if action.status == ActionStatus.SUCCESS:
             # Action executed without errors;
             action.apply_effects(self.state)
             # print(f'[Agent] Action: {action} / Action succeded.')
             action.on_success()
 
-        # Execution failed
-        if action.status == ActionStatus.FAILURE:
-            action.on_failure()
-            self.undo_completed_actions()
-
         # Any clean up needed after execution e.g. updating system states
         action.on_exit()
 
         return action.status
+
+    def undo_actions(self, completed_actions: List[Action]):
+        """
+        Undo the effects of an action.
+        """
+
+        for action in completed_actions[::-1]:
+            action.undo()

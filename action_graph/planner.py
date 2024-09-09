@@ -14,9 +14,6 @@ class PlanningFailedException(Exception):
 class Planner():
     """Search and determine a plan (sequence of actions) that satifies a desired goal state"""
 
-    def __init__(self, actions: List[Action]) -> None:
-        self.update_actions(actions)
-
     def update_actions(self, actions: List[Action]):
         """
         The refereshes/reloads the list of Actions available to the Planner.
@@ -91,6 +88,8 @@ class Planner():
         return action_lookup
 
     def __parse_references(self, ref: Any, state: State, prefix: str) -> Any:
+        if isinstance(ref, str) and '/' in ref:
+            return '/'.join([self.__parse_references(r, state, prefix) for r in ref.split('/')])
         while ref and isinstance(ref, str) and ref[0] == prefix and ref[1:] in state:
             ref = state[ref[1:]]
         return ref

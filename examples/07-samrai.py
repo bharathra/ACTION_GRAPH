@@ -5,8 +5,8 @@ import sys
 import time
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from action_graph.action import Action, ActionStatus, State
-from action_graph.agent import Agent
+if True:
+    from action_graph.agent import Agent, Action, ActionStatus, State
 
 
 class ApproachSeam(Action):
@@ -94,7 +94,7 @@ class LoadNozzleSemiAuto(Action):
     preconditions = {"SCAN_N": "$NOZZLE.LOADED"}
     cost = 10
 
-    def on_execute(self, outcome: State):
+    def execute(self):
         _timeout_ = 5
         t0 = time.time()
         while time.time() - t0 < _timeout_:
@@ -115,7 +115,7 @@ class _CachedMoveToTaskPilotPose(Action):
                      "CELL.IS.SAFE": True,
                      "ROBOT.IS.READY": True, }
 
-    def on_execute(self, outcome: State):
+    def execute(self):
         # Simulate Failure: No cached js
         self.status = ActionStatus.FAILURE
 
@@ -128,7 +128,7 @@ class CachedMoveToTaskStart(Action):
 
     cost = 1
 
-    def on_execute(self, outcome: State):
+    def execute(self):
         # Simulate Failure: No cached js
         self.status = ActionStatus.FAILURE
 
@@ -170,7 +170,7 @@ class SeamTrackMetaPlan(Action):
     effects = {"SEAMTRACK.METAPLAN.OK": ...}
     preconditions = {"AT.SEAM.START": "$SEAMTRACK.METAPLAN.OK"}
 
-    def on_execute(self, outcome: State):
+    def execute(self):
         if self.agent.state['PLAN.ATTEMPT'] <= 0:
             print('RECONFIGURED')
             self.agent.state['PLAN.ATTEMPT'] = 1
@@ -192,7 +192,7 @@ class VerifyNozzleType(Action):
     effects = {"NOZZLE.LOADED": ...}
     preconditions = {"SEAL.DATA.LOADED": "$NOZZLE.LOADED"}
 
-    def on_execute(self, outcome: State):
+    def execute(self):
         # Simulate Failure: Assume the current EE is not the same as reqired EE
         self.status = ActionStatus.FAILURE
 
@@ -209,7 +209,7 @@ class _AlignZone(Action):
     preconditions = {"ROBOT.ISAT.ZONE": "$ZONE.ALIGNED"}
     cost = 10
 
-    def on_execute(self, outcome: State):
+    def execute(self):
         # Scan
         # Register
         # Apply Calibration Transform
@@ -223,7 +223,7 @@ class _CheckZoneAlignment(Action):
     preconditions = {"SEAL.DATA.LOADED": "$ZONE.ALIGNED"}
     cost = 1
 
-    def on_execute(self, outcome: State):
+    def execute(self):
         # Get the zone of the current TaskSegment
         active_zone = 'Z1'  # hardcoded
         # Check if it was aligned earlier
@@ -259,7 +259,7 @@ class ScanCalibrationGrid(Action):
     effects = {"GRID.SCANNED": ...}
     preconditions = {"ROBOT.ISAT.TASK": "$GRID.SCANNED"}
 
-    def on_execute(self, outcome: State):
+    def execute(self):
         if self.agent.state['SCAN.TARGET'] > 3:
             self.status = ActionStatus.SUCCESS
             return
@@ -291,7 +291,7 @@ class ScanProduct(Action):
     effects = {"PRODUCT.SCANNED": ...}
     preconditions = {"ROBOT.ISAT.TASK": "$PRODUCT.SCANNED"}
 
-    def on_execute(self, outcome: State):
+    def execute(self):
         if self.agent.state['SCAN.TARGET'] > 3:
             self.status = ActionStatus.SUCCESS
             return
@@ -335,4 +335,3 @@ if __name__ == "__main__":
 
     for plan in ai.plan_and_execute(goal_state, verbose=True):
         input()
-
