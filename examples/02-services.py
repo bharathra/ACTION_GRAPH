@@ -24,9 +24,13 @@ class ApplyForDriversLicense(Action):
     async_exec: bool = True
 
     def execute(self):
-        time.sleep(1)
+        t0 = time.time()
+        while time.time() - t0 < 5:
+            print("Waiting for drivers license...")
+            time.sleep(1)
         print("Drivers ed completed; Have license>>>", self.effects["has_drivers_license"])
-        return super().execute()
+        self.status = ActionStatus.SUCCESS
+        # self.status = ActionStatus.FAILURE  # simulate failure
 
 
 class FillGas(Action):

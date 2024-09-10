@@ -2,7 +2,6 @@
 
 from copy import deepcopy
 from enum import auto, Enum
-from threading import Thread
 
 
 class State(dict):
@@ -13,7 +12,6 @@ class State(dict):
 
 class ActionStatus(Enum):
     NEUTRAL = auto()
-    RUNNING = auto()
     SUCCESS = auto()
     FAILURE = auto()
 
@@ -32,24 +30,36 @@ class Action():
 
     def __init__(self, agent=None) -> None:
         self.agent = agent
-        self._exec_thread: Thread = Thread(target=self.execute, args=())
-
-    def check_runtime_precondition(self) -> bool:
-        return True
+        self.action_name = self.__class__.__name__
 
     def _execute(self):
-        self.status = ActionStatus.RUNNING
-        self._exec_thread = Thread(target=self.execute)
-        self._exec_thread.start()
+
+        self.execute()
+
+        if self.status == ActionStatus.NEUTRAL:
+            # this is when action completes with no change to the state
+            # print(f'[Agent] Action: {action} / Action completed with neutral state.')
+            self.on_neutral()  # ignore effects
+
+        if self.status == ActionStatus.FAILURE:
+            # Action execution failed
+            print(f'[Agent] Action: {self.action_name} / Action Failed!')
+            self.on_failure()
+
+        if self.status == ActionStatus.SUCCESS:
+            # Action executed without errors;
+            self.apply_effects(self.agent.state)
+            # print(f'[Agent] Action: {action} / Action succeded.')
+            self.on_success()
+
+        # Any clean up needed after execution e.g. updating system states
+        self.on_exit()
 
     def execute(self):
         # NOTE: Any overrides of this method has to explicitly set
         # the status either one of SUCCESS, FAILURE, ABORTED;
         # otherwise, status will be treated as FAILURE
         self.status = ActionStatus.SUCCESS
-
-    def is_running(self):
-        return self._exec_thread.is_alive()
 
     def on_neutral(self):
         pass
@@ -66,11 +76,6 @@ class Action():
     def abort(self):
         pass
 
-    def reset_effects(self, state: State):
-        # restore the state to the prior state
-        for k, v in self.prior_state.items():
-            state[k] = v
-
     def on_exit(self):
         pass
 
@@ -79,6 +84,11 @@ class Action():
         for k, v in self.effects.items():
             # backup the prior state
             self.prior_state[k] = state.get(k, Ellipsis)
+            state[k] = v
+
+    def reset_effects(self, state: State):
+        # restore the state to the prior state
+        for k, v in self.prior_state.items():
             state[k] = v
 
     def __repr__(self) -> str:

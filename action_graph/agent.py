@@ -1,7 +1,8 @@
 #! /usr/bin/env python3
 
-from time import sleep, time
-from typing import Iterable, List
+import time
+from threading import Thread
+from typing import Dict, Iterable, List, Tuple
 
 from action_graph.action import (Action, ActionStatus, State)
 from action_graph.planner import Planner, PlanningFailedException
@@ -22,6 +23,7 @@ class Agent:
         self.state: State = {}
         self.__actions: List[Action] = []
         self.__completed_actions_stack: List[Action] = []
+        self.__async_action_threads: Dict[str, Tuple[Thread, Action]] = {}
 
     def load_actions(self, actions: List[Action]):
         """
@@ -92,6 +94,16 @@ class Agent:
         except PlanningFailedException as pfx:
             print(f"[Agent] Planning failed! {pfx}")
             return []
+
+    def execute_plan(self, plan: List[Action]):
+        """
+        Execute a plan of actions.
+
+        :param plan:List[Action]: List of actions to be executed.
+        """
+
+        for action in plan:
+            self.execute_action(action)
 
     def plan_and_execute(self, goal: State, verbose: bool = False) -> Iterable:
         """
@@ -176,62 +188,42 @@ class Agent:
         :return:ActionStatus: Status of the action execution
         """
 
-        # Check runtime precondition
-        if not action.check_runtime_precondition():
-            print(f'[Agent] Action: {action} / Runtime pre-condition check failed!')
-            return ActionStatus.FAILURE
+        # if this action is dependent on another action that is still running,
+        # then wait for the dependent action to complete
+        for k in action.preconditions.keys():
+            if k not in self.__async_action_threads.keys():
+                continue
+            # wait for the dependent action to complete
+            self.__async_action_threads[k][0].join()
+            if self.__async_action_threads[k][1].status == ActionStatus.FAILURE:
+                raise PlanningFailedException(f'[Agent] Action: {action} : Dependency failed!')
+            self.__async_action_threads.pop(k)
 
-        # Execute the plan step
-        action._execute()
-        # action.execute is an async process inside _execute,
+        # execute the action in a separate thread irrespective of the async_exec flag
+        _exec_thread = Thread(target=action._execute)
+        _exec_thread.start()
 
+        # if the action is set to execute asynchronously
         if action.async_exec:
-            # if this is an async action; just apply the effects and return
-            action.apply_effects(self.state)
-            return
+            for k in action.effects.keys():
+                self.__async_action_threads[k] = (_exec_thread, action)
+                print(f'[Agent] Action: {action} / Executing asynchronously...')
+                action.apply_effects(self.state)
+            return ActionStatus.NEUTRAL
 
         # monitor the status; wait until execution is complete
-        time0 = time()
-        while action.is_running():
+        time0 = time.time()
+        while _exec_thread.is_alive():
             if self.__abort:
-                # if an abort was signalled
                 action.abort()
                 # print(f'[Agent] Action: {action} / Execution aborted!!')
                 action.status = ActionStatus.FAILURE
                 break
-            if time()-time0 > action.timeout:
-                # Action timeout exceeded
+            if time.time()-time0 > action.timeout:
                 raise Exception(f'[Agent] Action: {action} : Timed out!')
-            if action.status != ActionStatus.RUNNING:
-                # thread is alive but the status has changed
-                break  # so move on
-            sleep(0.05)  # throttle loop
+                #
+            time.sleep(0.01)  # throttle loop
             # print(f'[Agent] Action: {str(action)} is running...')
-
-        if action.status == ActionStatus.RUNNING:
-            # the user forgot to set the status; or something bad happened;
-            # let's treat this as FAILURE!
-            action.status = ActionStatus.FAILURE
-            print(f'[Agent] Action: {action} / Status unknown; Assuming failure!')
-
-        if action.status == ActionStatus.NEUTRAL:
-            # this is when action completes with no change to the state
-            # print(f'[Agent] Action: {action} / Action completed with neutral state.')
-            action.on_neutral()  # ignore effects
-
-        if action.status == ActionStatus.FAILURE:
-            # Action execution failed
-            print(f'[Agent] Action: {action} / Action Failed!')
-            action.on_failure()
-
-        if action.status == ActionStatus.SUCCESS:
-            # Action executed without errors;
-            action.apply_effects(self.state)
-            # print(f'[Agent] Action: {action} / Action succeded.')
-            action.on_success()
-
-        # Any clean up needed after execution e.g. updating system states
-        action.on_exit()
 
         return action.status
 
