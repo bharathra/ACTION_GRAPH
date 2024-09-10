@@ -195,8 +195,16 @@ class Agent:
                 continue
             # wait for the dependent action to complete
             self.__async_action_threads[k][0].join()
-            if self.__async_action_threads[k][1].status == ActionStatus.FAILURE:
-                raise PlanningFailedException(f'[Agent] Action: {action} : Dependency failed!')
+            predecessor_action = self.__async_action_threads[k][1]
+            if predecessor_action.status == ActionStatus.FAILURE:
+                # raise PlanningFailedException(f'[Agent] Action: {action} : Dependency ({predecessor_action}) failed!')
+                predecessor_action.reset_effects(self.state)
+                if predecessor_action in self.__actions:
+                    # print(f"Removing effects of {predecessor_action}")
+                    predecessor_action.reset_effects(self.state)
+                    self.__actions.remove(predecessor_action)
+                    self.__planner.update_actions(self.__actions)
+                return ActionStatus.NEUTRAL
             self.__async_action_threads.pop(k)
 
         # execute the action in a separate thread irrespective of the async_exec flag
@@ -207,7 +215,7 @@ class Agent:
         if action.async_exec:
             for k in action.effects.keys():
                 self.__async_action_threads[k] = (_exec_thread, action)
-                print(f'[Agent] Action: {action} / Executing asynchronously...')
+                # print(f'[Agent] Action: {action} / Executing asynchronously...')
                 action.apply_effects(self.state)
             return ActionStatus.NEUTRAL
 
