@@ -25,12 +25,12 @@ class Planner():
 
     def generate_plan(self, target_state: State, start_state: State, avoid_actions: List[Action] = None) -> List[Action]:
         """
-        Find and return an optimal sequence of actions (the plan) that will 
-        lead from the start state to the target state.
+        Generate a plan to achieve the desired goal state.
 
-        :param target_state:State: Desired goal (target) state
-        :param start_state:State: Current/start state of the system
-        :return:List[Action]: List of actions updated with their expected outcomes (effects)
+        :param target_state:State: Desired goal state
+        :param start_state:State: Current system state
+        :param avoid_actions:List[Action]: List of actions to avoid
+        :return:List[Action]: List of actions to achieve the desired goal state
         """
 
         if len(target_state.items()) > 1:
@@ -78,6 +78,7 @@ class Planner():
         impossible_actions = [a for a in chosen_path if a.cost >= sys.float_info.max]
         for ia in impossible_actions:
             raise PlanningFailedException(f'No action available to satisfy: {ia.effects}')
+
         return chosen_path
 
     def __create_action_lookup(self, actions: List[Action]) -> Dict[Tuple[Any, Any], List[Action]]:
