@@ -63,7 +63,7 @@ class RobotGoTo(Action):
     preconditions = {"TASK.INFO.LOADED": "$ROBOT.LOCATION"}
 
     def execute(self):
-        location = self.effects["ROBOT.LOCATION"]
+        location = self.agent.state['LOC']
         print(f"Moving robot to {location}")
         self.status = ActionStatus.SUCCESS
 
@@ -72,8 +72,13 @@ class GetTaskInfo(Action):
     effects = {"TASK.INFO.LOADED": ...}
 
     def execute(self):
-        task_info = self.effects["TASK.INFO.LOADED"]
-        task, info = task_info.split("/")
+        task = self.effects["TASK.INFO.LOADED"]
+        if task == "NEXT":
+            self.agent.state["LOC"] = f"SEARCHED/{task}"
+        else:
+            self.agent.state["LOC"] = task
+
+        print(f"Task info loaded: {self.agent.state['LOC']}")
         self.status = ActionStatus.SUCCESS
 
 
@@ -82,8 +87,11 @@ if __name__ == "__main__":
     ai = Agent()
     actions = [a(ai) for a in Action.__subclasses__()]
     ai.load_actions(actions)
-    ai.state = {}
-    #
-    goal_state = {"TASK": "T1"}
-    for plan in ai.plan_and_execute(goal_state, verbose=True):
-        input()
+
+    selected_tasks = ['T1', 'T2', 'T3', 'T4', 'T5']
+    for t in selected_tasks:
+        goal_state = {"TASK": t}
+        for plan in ai.plan_and_execute(goal_state, verbose=True):
+            input()
+
+    ai.state["TASK"] = ""
