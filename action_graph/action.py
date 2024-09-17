@@ -48,7 +48,8 @@ class Action():
 
         if self.status == ActionStatus.SUCCESS:
             # Action executed without errors;
-            self.apply_effects(self.agent.state)
+            if not self.async_exec:  # if running asynchronously, agent will handle the effects
+                self.apply_effects(self.agent.state)
             # print(f'[Agent] Action: {action} / Action succeded.')
             self.on_success()
 

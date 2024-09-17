@@ -197,11 +197,10 @@ class Agent:
             self.__async_action_threads[k][0].join()
             predecessor_action = self.__async_action_threads[k][1]
             if predecessor_action.status == ActionStatus.FAILURE:
-                # raise PlanningFailedException(f'[Agent] Action: {action} : Dependency ({predecessor_action}) failed!')
+                # reset the effects of the predecessor action
                 predecessor_action.reset_effects(self.state)
                 if predecessor_action in self.__actions:
-                    # print(f"Removing effects of {predecessor_action}")
-                    predecessor_action.reset_effects(self.state)
+                    # remove the predecessor action from the list of actions
                     self.__actions.remove(predecessor_action)
                     self.__planner.update_actions(self.__actions)
                 return ActionStatus.NEUTRAL

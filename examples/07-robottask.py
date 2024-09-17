@@ -12,6 +12,7 @@ if True:
 class AwaitTaskCompletion(Action):
     effects = {"TASK": ...}
     preconditions = {"OFFLOADED": "$TASK"}
+    auto_reset = True
 
     def execute(self):
         print("Awaiting task completion...")
@@ -26,6 +27,7 @@ class OffloadTask(Action):
     preconditions = {"TASK.METAPLAN.OKAY": "$OFFLOADED",
                      "EE.READY": "$OFFLOADED",
                      "ROBOT.LOCATION": "$OFFLOADED/TASK.INIT.POSE"}
+    auto_reset = True
 
     def execute(self):
         print("Offloading task...")
@@ -34,6 +36,7 @@ class OffloadTask(Action):
 
 class CheckEE(Action):
     effects = {"EE.READY": ...}
+    auto_reset = True
 
     def execute(self):
         ee_ready = True
@@ -48,6 +51,7 @@ class TaskMetaPlan(Action):
     effects = {"TASK.METAPLAN.OKAY": ...}
     preconditions = {"ROBOT.LOCATION": "$TASK.METAPLAN.OKAY/TASK.INIT.POSE"}
     async_exec = True
+    auto_reset = True
 
     def execute(self):
         t0 = time.time()
@@ -61,6 +65,7 @@ class TaskMetaPlan(Action):
 class RobotGoTo(Action):
     effects = {"ROBOT.LOCATION": ...}
     preconditions = {"TASK.INFO.LOADED": "$ROBOT.LOCATION"}
+    auto_reset = True
 
     def execute(self):
         location = self.agent.state['LOC']
@@ -70,6 +75,7 @@ class RobotGoTo(Action):
 
 class GetTaskInfo(Action):
     effects = {"TASK.INFO.LOADED": ...}
+    auto_reset = True
 
     def execute(self):
         task = self.effects["TASK.INFO.LOADED"]
@@ -87,11 +93,16 @@ if __name__ == "__main__":
     ai = Agent()
     actions = [a(ai) for a in Action.__subclasses__()]
     ai.load_actions(actions)
+    ai.state = {"SEL.TASKS": ["T1", "T2", "T3", "T4", "T5"]}
 
-    selected_tasks = ['T1', 'T2', 'T3', 'T4', 'T5']
-    for t in selected_tasks:
-        goal_state = {"TASK": t}
+    for _ in range(len(ai.state["SEL.TASKS"])):
+        goal_state = {"TASK": "NEXT"}
         for plan in ai.plan_and_execute(goal_state, verbose=True):
             input()
+
+    # for t in ai.state["SEL.TASKS"]:
+    #     goal_state = {"TASK": t}
+    #     for plan in ai.plan_and_execute(goal_state, verbose=True):
+    #         input()
 
     ai.state["TASK"] = ""
