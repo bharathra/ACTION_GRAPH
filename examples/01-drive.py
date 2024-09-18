@@ -10,7 +10,8 @@ if True:
 
 class Drive(Action):
     effects = {"driving": True}
-    preconditions = {"has_drivers_license": True, "tank_has_gas": True}
+    preconditions = {"has_drivers_license": True, 
+                     "tank_has_gas": True}
 
 
 class FillGas(Action):

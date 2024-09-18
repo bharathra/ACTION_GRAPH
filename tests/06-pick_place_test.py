@@ -20,27 +20,23 @@ class Pick(Action):
 
 class Place(Action):
     effects = {"object_location": ...}
-    preconditions = {"object_location": "gripper", 
-                     "robot_location": "$object_location"}
+    preconditions = {"object_location": "gripper", "robot_location": "$object_location"}
 
 
-if __name__ == "__main__":
-    world_state = {"robot_ready": True, 
-                   "object_location": "P1"}
+def test():
+    world_state = {"robot_ready": True, "object_location": "P1"}
     goal_state = {"object_location": "P2"}
-    # goal_state = {"object1": "nudged"}
 
     ai = Agent()
-
     actions = [a(ai) for a in Action.__subclasses__()]
     ai.load_actions(actions)
-
-    print("Initial State:", world_state)
     ai.state = world_state
+    plan = ai.get_plan(goal_state)
 
-    print("Goal State:   ", goal_state)
-    
-    # plan = ai.get_plan(goal_state)
-    # ai.print_plan_to_console(plan)
-    for plan in ai.plan_and_execute(goal_state):
-        ai.print_plan_to_console(plan)
+    expected_actions = ['Move', 'Pick', 'Move', 'Place']
+    expected_outcome = [{'robot_location': 'P1'}, {'object_location': 'gripper'},
+                        {'robot_location': 'P2'}, {'object_location': 'P2'}]
+
+    for ax, eax, eoc in zip(plan, expected_actions, expected_outcome):
+        assert ax.__class__.__name__ == eax, f'Incorrect Action!'
+        assert ax.effects == eoc, f'Incorrect Action Outcome!'

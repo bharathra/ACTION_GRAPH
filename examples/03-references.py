@@ -10,7 +10,9 @@ if True:
 
 class GoBackToTheFuture(Action):
     effects = {"year": "1985"}
-    preconditions = {"year": "1955", "has_time_machine": True, "critical_speed": "88mph"}
+    preconditions = {"year": "1955", 
+                     "has_time_machine": True, 
+                     "critical_speed": "88mph"}
 
     def execute(self):
         print('Going Back to the future...')
@@ -65,7 +67,8 @@ class AccelerateToCriticalSpeed(Action):
 
 class GetCar(Action):
     effects: State = {"has_car": ...}
-    preconditions: State = {"year": "1955", "car_at_doc_browns_lab": "$has_car"}
+    preconditions: State = {"year": "1955", 
+                            "car_at_doc_browns_lab": "$has_car"}
 
     def execute(self):
         print(f"Getting Car: {['has_car']} ...")

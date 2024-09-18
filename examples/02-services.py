@@ -11,7 +11,9 @@ if True:
 
 class Drive(Action):
     effects = {"driving": ...}
-    preconditions = {"has_drivers_license": True, "has_car": "$driving", "tank_has_gas": True}
+    preconditions = {"has_drivers_license": True, 
+                     "has_car": "$driving", 
+                     "tank_has_gas": True}
 
     def execute(self):
         print("Driving car>>>", self.effects["driving"])
