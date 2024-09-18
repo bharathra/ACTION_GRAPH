@@ -79,10 +79,13 @@ class GetTaskInfo(Action):
 
     def execute(self):
         task = self.effects["TASK.INFO.LOADED"]
-        if task == "NEXT":
-            self.agent.state["LOC"] = f"SEARCHED/{task}"
-        else:
-            self.agent.state["LOC"] = task
+        self.agent.state["LOC"] = task
+
+        selected_tasks = self.agent.state.get("SEL.TASKS", [])
+        print(f"Selected tasks: {selected_tasks}")
+        if selected_tasks and "NEXT" in task:
+            nexttask = selected_tasks.pop(0)
+            self.agent.state["LOC"] = nexttask
 
         print(f"Task info loaded: {self.agent.state['LOC']}")
         self.status = ActionStatus.SUCCESS
@@ -95,14 +98,16 @@ if __name__ == "__main__":
     ai.load_actions(actions)
     ai.state = {"SEL.TASKS": ["T1", "T2", "T3", "T4", "T5"]}
 
-    for _ in range(len(ai.state["SEL.TASKS"])):
-        goal_state = {"TASK": "NEXT"}
-        for plan in ai.plan_and_execute(goal_state, verbose=True):
-            input()
-
+    # # simpler approach (assuming we know the optimal order of tasks)
     # for t in ai.state["SEL.TASKS"]:
     #     goal_state = {"TASK": t}
     #     for plan in ai.plan_and_execute(goal_state, verbose=True):
     #         input()
+
+    # more complex approach (the optimal order is decided at runtime)
+    while ai.state["SEL.TASKS"]:
+        goal_state = {"TASK": "NEXT"}
+        for plan in ai.plan_and_execute(goal_state, verbose=True):
+            pass
 
     ai.state["TASK"] = ""
