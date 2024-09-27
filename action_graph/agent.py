@@ -95,6 +95,68 @@ class Agent:
             print(f"[Agent] Planning failed! {pfx}")
             return []
 
+    def execute_action(self, action: Action) -> ActionStatus:
+        """
+        Execute an action and monitor its status.
+
+        :param action:Action: Action to be executed
+        :return:ActionStatus: Status of the action execution
+        """
+
+        # if this action is dependent on another action that is still running,
+        # then wait for the dependent action to complete
+        for k in action.preconditions.keys():
+            if k not in self.__async_action_threads.keys():
+                continue
+            # wait for the dependent action to complete
+            self.__async_action_threads[k][0].join()
+            predecessor_action = self.__async_action_threads[k][1]
+            if predecessor_action.status == ActionStatus.FAILURE:
+                # reset the effects of the predecessor action
+                predecessor_action.reset_effects(self.state)
+                if predecessor_action in self.__actions:
+                    # remove the predecessor action from the list of actions
+                    self.__actions.remove(predecessor_action)
+                    self.__planner.update_actions(self.__actions)
+                return ActionStatus.NEUTRAL
+            self.__async_action_threads.pop(k)
+
+        # execute the action in a separate thread irrespective of the async_exec flag
+        _exec_thread = Thread(target=action._execute)
+        _exec_thread.start()
+
+        # if the action is set to execute asynchronously
+        if action.async_exec:
+            for k in action.effects.keys():
+                self.__async_action_threads[k] = (_exec_thread, action)
+                # print(f'[Agent] Action: {action} / Executing asynchronously...')
+                action.apply_effects(self.state)
+            return ActionStatus.NEUTRAL
+
+        # monitor the status; wait until execution is complete
+        time0 = time.time()
+        while _exec_thread.is_alive():
+            if self.__abort:
+                action.abort()
+                # print(f'[Agent] Action: {action} / Execution aborted!!')
+                action.status = ActionStatus.FAILURE
+                break
+            if time.time()-time0 > action.timeout:
+                raise Exception(f'[Agent] Action: {action} : Timed out!')
+                #
+            time.sleep(0.01)  # throttle loop
+            # print(f'[Agent] Action: {str(action)} is running...')
+
+        return action.status
+
+    def undo_actions(self, completed_actions: List[Action]):
+        """
+        Undo the effects of an action.
+        """
+
+        for action in completed_actions[::-1]:
+            action.undo()
+
     def execute_plan(self, plan: List[Action]):
         """
         Execute a plan of actions.
@@ -180,64 +242,19 @@ class Agent:
                     str(action.effects) + '\n'
             print(plan_str)
 
-    def execute_action(self, action: Action) -> ActionStatus:
+    def plan_to_dict(self, plan: List[Action]) -> Dict[str, Dict[str, str]]:
         """
-        Execute an action and monitor its status.
+        Convert the plan to a dictionary for easy serialization.
 
-        :param action:Action: Action to be executed
-        :return:ActionStatus: Status of the action execution
-        """
-
-        # if this action is dependent on another action that is still running,
-        # then wait for the dependent action to complete
-        for k in action.preconditions.keys():
-            if k not in self.__async_action_threads.keys():
-                continue
-            # wait for the dependent action to complete
-            self.__async_action_threads[k][0].join()
-            predecessor_action = self.__async_action_threads[k][1]
-            if predecessor_action.status == ActionStatus.FAILURE:
-                # reset the effects of the predecessor action
-                predecessor_action.reset_effects(self.state)
-                if predecessor_action in self.__actions:
-                    # remove the predecessor action from the list of actions
-                    self.__actions.remove(predecessor_action)
-                    self.__planner.update_actions(self.__actions)
-                return ActionStatus.NEUTRAL
-            self.__async_action_threads.pop(k)
-
-        # execute the action in a separate thread irrespective of the async_exec flag
-        _exec_thread = Thread(target=action._execute)
-        _exec_thread.start()
-
-        # if the action is set to execute asynchronously
-        if action.async_exec:
-            for k in action.effects.keys():
-                self.__async_action_threads[k] = (_exec_thread, action)
-                # print(f'[Agent] Action: {action} / Executing asynchronously...')
-                action.apply_effects(self.state)
-            return ActionStatus.NEUTRAL
-
-        # monitor the status; wait until execution is complete
-        time0 = time.time()
-        while _exec_thread.is_alive():
-            if self.__abort:
-                action.abort()
-                # print(f'[Agent] Action: {action} / Execution aborted!!')
-                action.status = ActionStatus.FAILURE
-                break
-            if time.time()-time0 > action.timeout:
-                raise Exception(f'[Agent] Action: {action} : Timed out!')
-                #
-            time.sleep(0.01)  # throttle loop
-            # print(f'[Agent] Action: {str(action)} is running...')
-
-        return action.status
-
-    def undo_actions(self, completed_actions: List[Action]):
-        """
-        Undo the effects of an action.
+        :param plan:List[Action]: List of actions in the plan
+        :return:Dict[str, Dict[str, str]]: Dictionary representation of the plan
         """
 
-        for action in completed_actions[::-1]:
-            action.undo()
+        description = {}
+        for action in plan[::-1]:
+            sub = {}
+            for tag, goal in action.effects.items():
+                sub[tag] = goal
+            description[action.__class__.__name__] = sub
+            #
+        return description
